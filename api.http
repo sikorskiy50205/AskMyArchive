@@ -1,0 +1,57 @@
+# Sample requests (VS Code REST Client / Rider / Visual Studio).
+# Default host is the docker-compose port; for `dotnet run` take the port from launchSettings.json.
+@host = http://localhost:8080
+
+### Health
+GET {{host}}/health
+
+### Register
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "demo@example.com",
+  "password": "demo-password-123"
+}
+
+### Login — copy the token from the response
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@example.com",
+  "password": "demo-password-123"
+}
+
+@token = {{login.response.body.token}}
+
+### Upload a document
+POST {{host}}/api/documents
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="notes.txt"
+Content-Type: text/plain
+
+The washing machine warranty expires on 2027-03-15.
+The serial number is WM-482910.
+--boundary--
+
+### List documents (watch the indexing status)
+GET {{host}}/api/documents
+Authorization: Bearer {{token}}
+
+### Ask a question (SSE stream)
+POST {{host}}/api/ask
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "question": "When does the washing machine warranty expire?"
+}
+
+### List conversations
+GET {{host}}/api/conversations
+Authorization: Bearer {{token}}

@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: askmyarchive
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d askmyarchive"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=askmyarchive;Username=postgres;Password=postgres
+      ConnectionStrings__Redis: redis:6379
+      Llm__Chat__BaseUrl: ${CHAT_BASE_URL:-https://api.deepseek.com/v1}
+      Llm__Chat__ApiKey: ${CHAT_API_KEY:-}
+      Llm__Chat__Model: ${CHAT_MODEL:-deepseek-chat}
+      Llm__Embeddings__BaseUrl: ${EMBEDDINGS_BASE_URL:-https://api.openai.com/v1}
+      Llm__Embeddings__ApiKey: ${EMBEDDINGS_API_KEY:-}
+      Llm__Embeddings__Model: ${EMBEDDINGS_MODEL:-text-embedding-3-small}
+      Llm__Embeddings__Dimensions: ${EMBEDDINGS_DIMENSIONS:-1536}
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads:/app/data/uploads
+
+volumes:
+  pgdata:
+  uploads:

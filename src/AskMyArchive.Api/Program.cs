@@ -5,6 +5,7 @@ using AskMyArchive.Core.Entities;
 using AskMyArchive.Infrastructure;
 using AskMyArchive.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -62,11 +63,12 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Dev/demo convenience; switch to EF migrations before real production use.
-if (app.Configuration.GetValue("Database:EnsureCreated", defaultValue: true))
+// Apply any pending EF Core migrations on startup.
+// Set "Database:AutoMigrate": false in appsettings to opt out (e.g. when a separate deploy step runs migrations).
+if (app.Configuration.GetValue("Database:AutoMigrate", defaultValue: true))
 {
     using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreatedAsync();
+    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
 }
 
 app.UseSerilogRequestLogging();

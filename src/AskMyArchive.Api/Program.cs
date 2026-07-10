@@ -61,6 +61,13 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
+// The web frontend is served from a different origin (Next.js dev server / static hosting),
+// so the browser requires CORS headers on API responses.
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                  ?? ["http://localhost:3000"];
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
+    policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod()));
+
 var app = builder.Build();
 
 // Apply any pending EF Core migrations on startup.
@@ -75,6 +82,8 @@ app.UseSerilogRequestLogging();
 
 app.MapOpenApi();
 app.MapScalarApiReference(); // interactive API docs at /scalar/v1
+
+app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();

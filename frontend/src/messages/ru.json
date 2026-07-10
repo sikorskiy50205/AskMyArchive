@@ -1,0 +1,64 @@
+{
+  "common": {
+    "appName": "AskMyArchive",
+    "tagline": "Задавайте вопросы своим документам",
+    "loading": "Загрузка…"
+  },
+  "auth": {
+    "loginTitle": "Вход",
+    "loginSubtitle": "Рады видеть вас снова",
+    "registerTitle": "Регистрация",
+    "registerSubtitle": "Создайте аккаунт, чтобы задавать вопросы своим документам",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Пароль",
+    "confirmPassword": "Повторите пароль",
+    "loginButton": "Войти",
+    "registerButton": "Создать аккаунт",
+    "noAccount": "Нет аккаунта?",
+    "haveAccount": "Уже есть аккаунт?",
+    "registerLink": "Зарегистрироваться",
+    "loginLink": "Войти",
+    "registerSuccess": "Аккаунт создан!",
+    "errors": {
+      "invalidEmail": "Введите корректный email",
+      "passwordTooShort": "Пароль должен быть не короче 8 символов",
+      "passwordsDontMatch": "Пароли не совпадают",
+      "invalidCredentials": "Неверный email или пароль",
+      "userExists": "Пользователь с таким email уже существует",
+      "serverError": "Что-то пошло не так. Попробуйте ещё раз",
+      "networkError": "Не удалось связаться с сервером. Проверьте, что API запущен"
+    }
+  },
+  "nav": {
+    "chat": "Чат",
+    "documents": "Документы",
+    "profile": "Профиль",
+    "logout": "Выйти",
+    "openMenu": "Открыть меню"
+  },
+  "theme": {
+    "toggle": "Сменить тему",
+    "light": "Светлая",
+    "dark": "Тёмная",
+    "system": "Как в системе"
+  },
+  "locale": {
+    "switch": "Язык"
+  },
+  "chat": {
+    "title": "Чат",
+    "emptyTitle": "Здесь будет чат",
+    "emptyDescription": "Задавайте вопросы по своим документам и получайте ответы со ссылками на источники. Интерфейс чата — следующий этап разработки."
+  },
+  "documents": {
+    "title": "Документы",
+    "emptyTitle": "Здесь будут ваши документы",
+    "emptyDescription": "Загрузка PDF, DOCX, TXT и Markdown с отслеживанием статуса индексации появится на следующем этапе."
+  },
+  "profile": {
+    "title": "Профиль",
+    "emailLabel": "Email",
+    "settingsSoon": "Настройки профиля — смена пароля, удаление аккаунта — появятся на следующих этапах."
+  }
+}

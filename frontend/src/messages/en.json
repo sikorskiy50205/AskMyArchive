@@ -1,0 +1,64 @@
+{
+  "common": {
+    "appName": "AskMyArchive",
+    "tagline": "Ask questions about your own documents",
+    "loading": "Loading…"
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginSubtitle": "Welcome back",
+    "registerTitle": "Sign up",
+    "registerSubtitle": "Create an account to start asking questions about your documents",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "loginButton": "Sign in",
+    "registerButton": "Create account",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "registerLink": "Sign up",
+    "loginLink": "Sign in",
+    "registerSuccess": "Account created!",
+    "errors": {
+      "invalidEmail": "Enter a valid email",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "passwordsDontMatch": "Passwords don't match",
+      "invalidCredentials": "Invalid email or password",
+      "userExists": "A user with this email already exists",
+      "serverError": "Something went wrong. Please try again",
+      "networkError": "Could not reach the server. Check that the API is running"
+    }
+  },
+  "nav": {
+    "chat": "Chat",
+    "documents": "Documents",
+    "profile": "Profile",
+    "logout": "Sign out",
+    "openMenu": "Open menu"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "locale": {
+    "switch": "Language"
+  },
+  "chat": {
+    "title": "Chat",
+    "emptyTitle": "Chat will live here",
+    "emptyDescription": "Ask questions about your documents and get answers with source citations. The chat interface is the next development milestone."
+  },
+  "documents": {
+    "title": "Documents",
+    "emptyTitle": "Your documents will live here",
+    "emptyDescription": "Uploading PDF, DOCX, TXT and Markdown files with indexing status tracking arrives in the next milestone."
+  },
+  "profile": {
+    "title": "Profile",
+    "emailLabel": "Email",
+    "settingsSoon": "Profile settings — password change, account deletion — arrive in later milestones."
+  }
+}

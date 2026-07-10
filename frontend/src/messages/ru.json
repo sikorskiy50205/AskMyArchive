@@ -53,8 +53,29 @@
   },
   "documents": {
     "title": "Документы",
-    "emptyTitle": "Здесь будут ваши документы",
-    "emptyDescription": "Загрузка PDF, DOCX, TXT и Markdown с отслеживанием статуса индексации появится на следующем этапе."
+    "searchPlaceholder": "Поиск по названию…",
+    "dropHere": "Перетащите файлы сюда или нажмите, чтобы выбрать",
+    "dropHint": "PDF, DOCX, TXT, MD — до 50 МБ",
+    "uploadSuccess": "«{name}» загружен, начинаем индексацию",
+    "uploadFailed": "Не удалось загрузить «{name}»",
+    "unsupportedType": "«{name}»: такой тип файла не поддерживается",
+    "fileTooLarge": "«{name}»: файл пустой или больше 50 МБ",
+    "emptyTitle": "Пока нет документов",
+    "emptyDescription": "Загрузите первый документ — и сможете задавать по нему вопросы в чате.",
+    "noResults": "Ничего не найдено по запросу «{search}»",
+    "status": {
+      "Uploaded": "В очереди",
+      "Indexing": "Индексируется",
+      "Indexed": "Готов",
+      "Failed": "Ошибка"
+    },
+    "pages": "{count} стр.",
+    "deleteTitle": "Удалить документ?",
+    "deleteDescription": "«{name}» и все его данные для поиска будут удалены навсегда.",
+    "deleteConfirm": "Удалить",
+    "deleteCancel": "Отмена",
+    "deleteSuccess": "Документ удалён",
+    "deleteFailed": "Не удалось удалить документ"
   },
   "profile": {
     "title": "Профиль",

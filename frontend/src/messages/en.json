@@ -53,8 +53,29 @@
   },
   "documents": {
     "title": "Documents",
-    "emptyTitle": "Your documents will live here",
-    "emptyDescription": "Uploading PDF, DOCX, TXT and Markdown files with indexing status tracking arrives in the next milestone."
+    "searchPlaceholder": "Search by name…",
+    "dropHere": "Drag files here or click to browse",
+    "dropHint": "PDF, DOCX, TXT, MD — up to 50 MB",
+    "uploadSuccess": "\"{name}\" uploaded, indexing started",
+    "uploadFailed": "Failed to upload \"{name}\"",
+    "unsupportedType": "\"{name}\": this file type is not supported",
+    "fileTooLarge": "\"{name}\": the file is empty or larger than 50 MB",
+    "emptyTitle": "No documents yet",
+    "emptyDescription": "Upload your first document and you can ask questions about it in the chat.",
+    "noResults": "Nothing found for \"{search}\"",
+    "status": {
+      "Uploaded": "Queued",
+      "Indexing": "Indexing",
+      "Indexed": "Ready",
+      "Failed": "Failed"
+    },
+    "pages": "{count} pages",
+    "deleteTitle": "Delete document?",
+    "deleteDescription": "\"{name}\" and all of its search data will be permanently removed.",
+    "deleteConfirm": "Delete",
+    "deleteCancel": "Cancel",
+    "deleteSuccess": "Document deleted",
+    "deleteFailed": "Failed to delete the document"
   },
   "profile": {
     "title": "Profile",

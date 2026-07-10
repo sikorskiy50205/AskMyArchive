@@ -1,6 +1,6 @@
 # Sample requests (VS Code REST Client / Rider / Visual Studio).
 # Default host is the docker-compose port; for `dotnet run` take the port from launchSettings.json.
-@host = http://localhost:8080
+@host = http://localhost:5014
 
 ### Health
 GET {{host}}/health
@@ -24,7 +24,8 @@ Content-Type: application/json
   "password": "demo-password-123"
 }
 
-@token = {{login.response.body.token}}
+###
+@token = {{login.response.body.$.token}}
 
 ### Upload a document
 POST {{host}}/api/documents

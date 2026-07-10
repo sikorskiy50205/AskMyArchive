@@ -15,6 +15,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AskMyArchive.UnitTests", "t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AskMyArchive.IntegrationTests", "tests\AskMyArchive.IntegrationTests\AskMyArchive.IntegrationTests.csproj", "{4CBB5F00-4323-412B-8347-19369E3828D0}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{754FC069-D67B-A9D7-50A1-8D1CA196D8F1}"
+	ProjectSection(SolutionItems) = preProject
+		api.http = api.http
+		docker-compose.yml = docker-compose.yml
+		Dockerfile = Dockerfile
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{36D591C7-65C7-A0D1-1CBC-10CDE441BDC8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -93,7 +102,10 @@ Global
 		{892DB9B9-E464-47B5-BC2F-EB24D8E32B02} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{E6B1543D-096B-4C8A-B8D6-49770C9926C0} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{F56B1F03-977E-45F5-90B7-7F1A8005A70F} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
-		{96389225-9CA4-4AB8-8113-940BAAA1FCF3} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
-		{4CBB5F00-4323-412B-8347-19369E3828D0} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{96389225-9CA4-4AB8-8113-940BAAA1FCF3} = {36D591C7-65C7-A0D1-1CBC-10CDE441BDC8}
+		{4CBB5F00-4323-412B-8347-19369E3828D0} = {36D591C7-65C7-A0D1-1CBC-10CDE441BDC8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1FC55985-1915-4563-8493-9B55CC1917F7}
 	EndGlobalSection
 EndGlobal

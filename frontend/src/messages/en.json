@@ -97,7 +97,34 @@
   },
   "profile": {
     "title": "Profile",
+    "overview": "Overview",
     "emailLabel": "Email",
-    "settingsSoon": "Profile settings — password change, account deletion — arrive in later milestones."
+    "joinedLabel": "Joined",
+    "documentsLabel": "Documents",
+    "questionsLabel": "Questions asked",
+    "password": {
+      "title": "Change password",
+      "description": "Your session stays active after the change — no need to sign in again.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "currentRequired": "Enter your current password",
+      "submit": "Change password",
+      "success": "Password updated",
+      "wrongCurrent": "Current password is incorrect"
+    },
+    "delete": {
+      "title": "Delete account",
+      "description": "Deletes your account together with all documents, conversations and chat history. This cannot be undone — GDPR-style.",
+      "button": "Delete account",
+      "confirmTitle": "Delete your account?",
+      "confirmDescription": "All documents, conversations and messages will be permanently removed. Enter your password to confirm.",
+      "passwordLabel": "Password",
+      "cancel": "Cancel",
+      "confirmButton": "Delete permanently",
+      "success": "Account deleted",
+      "wrongPassword": "Wrong password",
+      "failed": "Failed to delete the account"
+    }
   }
 }

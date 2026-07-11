@@ -48,8 +48,22 @@
   },
   "chat": {
     "title": "Chat",
-    "emptyTitle": "Chat will live here",
-    "emptyDescription": "Ask questions about your documents and get answers with source citations. The chat interface is the next development milestone."
+    "newConversation": "New conversation",
+    "noConversations": "No conversations yet",
+    "history": "History",
+    "emptyTitle": "Ask something about your documents",
+    "emptyDescription": "For example: \"When does the washing machine warranty expire?\" The answer arrives with links to source documents.",
+    "inputPlaceholder": "Ask a question… (Enter to send, Shift+Enter for a new line)",
+    "send": "Send",
+    "thinking": "Thinking…",
+    "page": "p. {page}",
+    "askFailed": "Failed to get an answer. Please try again",
+    "deleteTitle": "Delete conversation?",
+    "deleteDescription": "\"{title}\" and all of its messages will be permanently removed.",
+    "deleteConfirm": "Delete",
+    "deleteCancel": "Cancel",
+    "deleteSuccess": "Conversation deleted",
+    "deleteFailed": "Failed to delete the conversation"
   },
   "documents": {
     "title": "Documents",
@@ -76,6 +90,10 @@
     "deleteCancel": "Cancel",
     "deleteSuccess": "Document deleted",
     "deleteFailed": "Failed to delete the document"
+  },
+  "preview": {
+    "pdfViewer": "PDF viewer",
+    "empty": "Document is empty"
   },
   "profile": {
     "title": "Profile",

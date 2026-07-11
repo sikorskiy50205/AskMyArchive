@@ -20,6 +20,8 @@ public static class ChatEndpoints
 
         group.MapPost("/ask", AskAsync);
         group.MapGet("/conversations", ListConversationsAsync);
+        group.MapGet("/conversations/{id:guid}/messages", ListMessagesAsync);
+        group.MapDelete("/conversations/{id:guid}", DeleteConversationAsync);
     }
 
     /// <summary>Answers a question over the user's archive, streaming tokens via server-sent events.</summary>
@@ -133,9 +135,42 @@ public static class ChatEndpoints
         return Results.Ok(conversations);
     }
 
+    private static async Task<IResult> ListMessagesAsync(
+        Guid id, ClaimsPrincipal principal, AppDbContext db, CancellationToken ct)
+    {
+        var userId = principal.GetUserId();
+        var exists = await db.Conversations.AnyAsync(c => c.Id == id && c.UserId == userId, ct);
+        if (!exists)
+            return Results.NotFound();
+
+        var messages = await db.Messages
+            .Where(m => m.ConversationId == id)
+            .OrderBy(m => m.CreatedAt)
+            .Select(m => new { m.Id, m.Role, m.Content, m.CreatedAt })
+            .ToListAsync(ct);
+        return Results.Ok(messages);
+    }
+
+    private static async Task<IResult> DeleteConversationAsync(
+        Guid id, ClaimsPrincipal principal, AppDbContext db, CancellationToken ct)
+    {
+        var userId = principal.GetUserId();
+        var conversation = await db.Conversations
+            .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId, ct);
+        if (conversation is null)
+            return Results.NotFound();
+
+        db.Conversations.Remove(conversation); // messages are removed by cascade delete
+        await db.SaveChangesAsync(ct);
+        return Results.NoContent();
+    }
+
+    // Match the camelCase naming the rest of the API uses (raw Serialize would emit PascalCase).
+    private static readonly JsonSerializerOptions SseJsonOptions = new(JsonSerializerDefaults.Web);
+
     private static async Task WriteEventAsync(HttpResponse response, string eventName, object payload, CancellationToken ct)
     {
-        await response.WriteAsync($"event: {eventName}\ndata: {JsonSerializer.Serialize(payload)}\n\n", ct);
+        await response.WriteAsync($"event: {eventName}\ndata: {JsonSerializer.Serialize(payload, SseJsonOptions)}\n\n", ct);
         await response.Body.FlushAsync(ct);
     }
 }

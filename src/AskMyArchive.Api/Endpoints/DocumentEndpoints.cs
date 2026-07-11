@@ -23,7 +23,49 @@ public static class DocumentEndpoints
         group.MapPost("/", UploadAsync).DisableAntiforgery();
         group.MapGet("/", ListAsync);
         group.MapGet("/{id:guid}", GetAsync);
+        group.MapGet("/{id:guid}/file", GetFileAsync);
+        group.MapGet("/{id:guid}/text", GetTextAsync);
         group.MapDelete("/{id:guid}", DeleteAsync);
+    }
+
+    private static readonly Dictionary<string, string> ContentTypeByExtension = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".pdf"] = "application/pdf",
+        [".docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        [".txt"] = "text/plain; charset=utf-8",
+        [".md"] = "text/markdown; charset=utf-8",
+    };
+
+    /// <summary>Streams the original uploaded file. Used by the browser's built-in PDF viewer.</summary>
+    private static async Task<IResult> GetFileAsync(
+        Guid id, ClaimsPrincipal principal, AppDbContext db, IFileStorage storage, CancellationToken ct)
+    {
+        var userId = principal.GetUserId();
+        var document = await db.Documents.FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId, ct);
+        if (document is null)
+            return Results.NotFound();
+
+        var extension = Path.GetExtension(document.FileName);
+        var contentType = ContentTypeByExtension.GetValueOrDefault(extension, "application/octet-stream");
+        // fileDownloadName omitted so the browser previews (Content-Disposition: inline) instead of downloading.
+        return Results.Stream(storage.OpenRead(document.StoragePath), contentType);
+    }
+
+    /// <summary>Returns the extracted text (reassembled from indexed chunks) for formats we can't render raw in the browser.</summary>
+    private static async Task<IResult> GetTextAsync(
+        Guid id, ClaimsPrincipal principal, AppDbContext db, CancellationToken ct)
+    {
+        var userId = principal.GetUserId();
+        var document = await db.Documents.FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId, ct);
+        if (document is null)
+            return Results.NotFound();
+
+        var chunks = await db.Chunks
+            .Where(c => c.DocumentId == id)
+            .OrderBy(c => c.Index)
+            .Select(c => c.Text)
+            .ToListAsync(ct);
+        return Results.Text(string.Join("\n\n", chunks), "text/plain; charset=utf-8");
     }
 
     private static async Task<IResult> UploadAsync(

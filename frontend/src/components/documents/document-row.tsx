@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { documentsApi, type DocumentDto } from "@/lib/documents-api";
 import { formatBytes, formatDateTime } from "@/lib/format";
+import { usePreviewStore } from "@/lib/preview-store";
 
 function StatusBadge({ doc }: { doc: DocumentDto }) {
   const t = useTranslations("documents.status");
@@ -53,6 +54,8 @@ export function DocumentRow({
 }) {
   const t = useTranslations("documents");
   const locale = useLocale();
+  const openPreview = usePreviewStore((s) => s.open);
+  const canPreview = doc.status === "Indexed" || doc.status === "Indexing";
 
   const del = useMutation({
     mutationFn: () => documentsApi.delete(doc.id),
@@ -74,10 +77,19 @@ export function DocumentRow({
   return (
     <div className="flex items-center gap-3 rounded-md border p-3">
       <FileText className="size-5 shrink-0 text-muted-foreground" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{doc.fileName}</p>
+      <button
+        type="button"
+        disabled={!canPreview}
+        onClick={() =>
+          openPreview({ documentId: doc.id, fileName: doc.fileName })
+        }
+        className="min-w-0 flex-1 cursor-pointer text-left disabled:cursor-default"
+      >
+        <p className="truncate text-sm font-medium underline-offset-2 group-enabled:hover:underline">
+          {doc.fileName}
+        </p>
         <p className="text-xs text-muted-foreground">{meta}</p>
-      </div>
+      </button>
       <StatusBadge doc={doc} />
       <AlertDialog>
         <AlertDialogTrigger asChild>

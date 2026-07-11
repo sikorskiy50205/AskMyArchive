@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { DocumentViewer } from "@/components/documents/document-viewer";
 import { Header } from "@/components/shell/header";
 import { Sidebar } from "@/components/shell/sidebar";
 import { useAuthGuard } from "@/lib/use-auth-guard";
@@ -21,12 +22,16 @@ export default function AppLayout({
   }
 
   return (
-    <div className="flex min-h-svh">
+    // Fixed viewport height so pages like chat can scroll internally.
+    <div className="flex h-svh">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main className="flex flex-1 flex-col p-6">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6">
+          {children}
+        </main>
       </div>
+      <DocumentViewer />
     </div>
   );
 }

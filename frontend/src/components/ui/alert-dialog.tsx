@@ -30,11 +30,19 @@ function AlertDialogPortal({
 
 function AlertDialogOverlay({
   className,
+  onClick,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Overlay>) {
   return (
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
+      // Radix AlertDialog intentionally ignores outside clicks; simulate an Escape
+       // keydown so the open dialog closes via its default keyboard handler.
+      onClick={(event) => {
+        onClick?.(event);
+        if (event.defaultPrevented) return;
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      }}
       className={cn(
         "fixed inset-0 z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className

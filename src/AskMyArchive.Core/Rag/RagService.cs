@@ -12,7 +12,7 @@ public sealed record RagAnswer(IReadOnlyList<ChunkHit> Sources, IAsyncEnumerable
 /// </summary>
 public sealed class RagService(IEmbeddingClient embeddings, IChatClient chat, IChunkSearcher searcher)
 {
-    public const int DefaultTopK = 6;
+    public const int DefaultTopK = 8;
 
     public async Task<RagAnswer> AskAsync(
         Guid userId,

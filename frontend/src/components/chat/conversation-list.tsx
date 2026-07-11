@@ -62,7 +62,9 @@ export function ConversationList({
   });
 
   return (
-    <div className="flex h-full flex-col">
+    // flex-1 + min-h-0 instead of h-full: percentage heights don't propagate reliably
+    // through the aside → conversation-list chain and the list ends up overflowing.
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="p-3">
         <Button
           variant="outline"
@@ -73,7 +75,10 @@ export function ConversationList({
           {t("newConversation")}
         </Button>
       </div>
-      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-3">
+      {/* relative: rows contain absolutely-positioned sr-only spans; without a
+          positioned ancestor they anchor to the document and stretch <html>
+          past the viewport (phantom scrollbar + dark bar below the layout). */}
+      <div className="relative min-h-0 flex-1 space-y-1 overflow-auto px-3 pb-3">
         {isPending ? (
           <>
             <Skeleton className="h-12" />

@@ -1,5 +1,6 @@
 "use client";
 
+import { forwardRef } from "react";
 import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
@@ -15,21 +16,20 @@ import type { DocumentStatus } from "@/lib/documents-api";
 export type StatusFilter = "all" | DocumentStatus;
 export type DateFilter = "all" | "today" | "week" | "month";
 
-export function FiltersBar({
-  search,
-  onSearchChange,
-  status,
-  onStatusChange,
-  date,
-  onDateChange,
-}: {
-  search: string;
-  onSearchChange: (v: string) => void;
-  status: StatusFilter;
-  onStatusChange: (v: StatusFilter) => void;
-  date: DateFilter;
-  onDateChange: (v: DateFilter) => void;
-}) {
+export const FiltersBar = forwardRef<
+  HTMLInputElement,
+  {
+    search: string;
+    onSearchChange: (v: string) => void;
+    status: StatusFilter;
+    onStatusChange: (v: StatusFilter) => void;
+    date: DateFilter;
+    onDateChange: (v: DateFilter) => void;
+  }
+>(function FiltersBar(
+  { search, onSearchChange, status, onStatusChange, date, onDateChange },
+  searchRef,
+) {
   const t = useTranslations("documents");
 
   return (
@@ -37,11 +37,15 @@ export function FiltersBar({
       <div className="relative min-w-52 flex-1">
         <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          ref={searchRef}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={t("searchPlaceholder")}
-          className="pl-8"
+          className="pl-8 pr-14"
         />
+        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 select-none rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-block">
+          Ctrl K
+        </kbd>
       </div>
       <Select value={status} onValueChange={(v) => onStatusChange(v as StatusFilter)}>
         <SelectTrigger className="w-40">
@@ -67,7 +71,7 @@ export function FiltersBar({
       </Select>
     </div>
   );
-}
+});
 
 // Client-side date-window check so we don't need a backend range filter.
 export function matchesDateFilter(iso: string, filter: DateFilter): boolean {

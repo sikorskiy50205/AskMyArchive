@@ -4,6 +4,19 @@
     "tagline": "Ask questions about your own documents",
     "loading": "Loading…"
   },
+  "errors": {
+    "notFound": {
+      "title": "Page not found",
+      "description": "The link may be stale or the address may contain a typo. We couldn't find what you were looking for.",
+      "goHome": "Go home"
+    },
+    "server": {
+      "title": "Something went wrong",
+      "description": "We're aware of the error. Refreshing the page usually helps.",
+      "digest": "Error code: {digest}",
+      "retry": "Try again"
+    }
+  },
   "auth": {
     "loginTitle": "Sign in",
     "loginSubtitle": "Welcome back",

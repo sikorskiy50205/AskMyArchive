@@ -30,19 +30,27 @@ export function BulkActionsBar({
   const t = useTranslations("documents.bulk");
   const [open, setOpen] = useState(false);
 
-  if (count === 0) return null;
+  const empty = count === 0;
 
   return (
     <div className="sticky top-0 z-10 flex items-center gap-2 rounded-md border bg-accent/70 p-2 backdrop-blur">
       <span className="text-sm font-medium">{t("selected", { count })}</span>
       <div className="ml-auto flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={onClear}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClear}
+          disabled={empty}
+          // Ghost's default hover:bg-muted disappears on the accent-tinted panel; use the
+          // page background so the hover state is actually visible.
+          className="hover:bg-background dark:hover:bg-background"
+        >
           <X className="size-4" />
           {t("cancel")}
         </Button>
         <AlertDialog open={open} onOpenChange={setOpen}>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
+            <Button variant="destructive" size="sm" disabled={empty}>
               <Trash2 className="size-4" />
               {t("deleteButton", { count })}
             </Button>

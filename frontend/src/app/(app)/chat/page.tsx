@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { History, MessagesSquare, SendHorizontal, Square } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -11,6 +11,7 @@ import {
   UserMessage,
 } from "@/components/chat/chat-message";
 import { ConversationList } from "@/components/chat/conversation-list";
+import { MessageSkeletons } from "@/components/chat/message-skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { askStream, chatApi, type Source } from "@/lib/chat-api";
+import { useHotkey } from "@/lib/use-hotkey";
 
 // A question/answer pair produced in this session; history loaded from the
 // server never overlaps with these (messages queries have staleTime: Infinity).
@@ -42,6 +44,7 @@ export default function ChatPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const messagesQuery = useQuery({
     queryKey: ["messages", activeId],
@@ -49,6 +52,19 @@ export default function ChatPage() {
     enabled: !!activeId,
     staleTime: Infinity,
   });
+
+  // Skeletons flash if the fetch resolves in ~50 ms (local dev API). Wait a
+  // short grace period before showing them so quick loads render nothing.
+  const loading = messagesQuery.isPending && !!activeId && exchanges.length === 0;
+  const [showSkeletons, setShowSkeletons] = useState(false);
+  useEffect(() => {
+    if (!loading) {
+      setShowSkeletons(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSkeletons(true), 150);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   function selectConversation(id: string | null) {
     if (streaming || id === activeId) return;
@@ -58,7 +74,25 @@ export default function ChatPage() {
     setActiveId(id);
     setExchanges([]);
     setHistoryOpen(false);
+    if (id === null) requestAnimationFrame(() => textareaRef.current?.focus());
   }
+
+  // Autofocus the input when the page opens so users can start typing immediately.
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  useHotkey(
+    "/",
+    useCallback(() => {
+      if (streaming) return;
+      if (activeId !== null) {
+        setActiveId(null);
+        setExchanges([]);
+      }
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    }, [streaming, activeId]),
+  );
 
   const updateLast = (patch: (e: Exchange) => Exchange) =>
     setExchanges((list) =>
@@ -172,12 +206,12 @@ export default function ChatPage() {
   }, [history.length, exchanges]);
 
   return (
-    <div className="flex min-h-0 flex-1 gap-4">
-      <aside className="hidden w-64 shrink-0 rounded-lg border md:block">
+    <div className="flex min-h-0 flex-1 gap-4 overflow-hidden">
+      <aside className="hidden w-64 shrink-0 flex-col overflow-hidden rounded-lg border md:flex">
         <ConversationList activeId={activeId} onSelect={selectConversation} />
       </aside>
 
-      <section className="flex min-w-0 flex-1 flex-col rounded-lg border">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-lg border">
         <div className="flex items-center border-b p-2 md:hidden">
           <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
             <SheetTrigger asChild>
@@ -208,6 +242,8 @@ export default function ChatPage() {
               title={t("emptyTitle")}
               description={t("emptyDescription")}
             />
+          ) : loading ? (
+            showSkeletons ? <MessageSkeletons /> : null
           ) : (
             <>
               {history.map((message, index) => {
@@ -252,6 +288,7 @@ export default function ChatPage() {
           }}
         >
           <Textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -271,12 +308,18 @@ export default function ChatPage() {
               size="icon"
               variant="secondary"
               onClick={stop}
+              className="size-10 cursor-pointer hover:bg-foreground/15 hover:shadow-lg hover:ring-2 hover:ring-foreground/40 active:scale-95"
             >
               <Square className="size-4 fill-current" />
               <span className="sr-only">{t("stop")}</span>
             </Button>
           ) : (
-            <Button type="submit" size="icon" disabled={!input.trim()}>
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!input.trim()}
+              className="size-10 cursor-pointer hover:bg-primary hover:brightness-125 hover:shadow-md hover:ring-2 hover:ring-primary/50 active:scale-95"
+            >
               <SendHorizontal className="size-4" />
               <span className="sr-only">{t("send")}</span>
             </Button>

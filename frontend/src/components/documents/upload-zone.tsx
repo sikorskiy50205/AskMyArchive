@@ -5,6 +5,7 @@ import { UploadCloud } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   ALLOWED_EXTENSIONS,
@@ -48,8 +49,16 @@ export function UploadZone({ onUploaded }: { onUploaded: () => void }) {
       );
       toast.success(t("uploadSuccess", { name: file.name }));
       onUploaded();
-    } catch {
-      toast.error(t("uploadFailed", { name: file.name }));
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.status === 400 &&
+        error.message.toLowerCase().includes("quota")
+      ) {
+        toast.error(t("quotaExceeded", { name: file.name }));
+      } else {
+        toast.error(t("uploadFailed", { name: file.name }));
+      }
     } finally {
       setUploads((u) => u.filter((x) => x.key !== key));
     }

@@ -81,6 +81,7 @@
     "dropHint": "PDF, DOCX, TXT, MD — up to 50 MB",
     "uploadSuccess": "\"{name}\" uploaded, indexing started",
     "uploadFailed": "Failed to upload \"{name}\"",
+    "quotaExceeded": "\"{name}\": storage quota exceeded",
     "unsupportedType": "\"{name}\": this file type is not supported",
     "fileTooLarge": "\"{name}\": the file is empty or larger than 50 MB",
     "emptyTitle": "No documents yet",
@@ -98,7 +99,29 @@
     "deleteConfirm": "Delete",
     "deleteCancel": "Cancel",
     "deleteSuccess": "Document deleted",
-    "deleteFailed": "Failed to delete the document"
+    "deleteFailed": "Failed to delete the document",
+    "selectRow": "Select \"{name}\"",
+    "filter": {
+      "statusAll": "Any status",
+      "dateAll": "Any date",
+      "dateToday": "Today",
+      "dateWeek": "Last 7 days",
+      "dateMonth": "Last 30 days"
+    },
+    "bulk": {
+      "selected": "{count, plural, one {# document selected} other {# documents selected}}",
+      "cancel": "Cancel",
+      "deleteButton": "Delete {count}",
+      "confirmTitle": "Delete selected documents?",
+      "confirmDescription": "{count, plural, one {# document and all its data will be permanently removed.} other {# documents and all their data will be permanently removed.}}",
+      "confirmCancel": "Cancel",
+      "confirmDelete": "Delete",
+      "deleteSuccess": "{count, plural, one {# document deleted} other {# documents deleted}}",
+      "deleteFailed": "Failed to delete documents"
+    },
+    "quota": {
+      "label": "Storage"
+    }
   },
   "preview": {
     "pdfViewer": "PDF viewer",

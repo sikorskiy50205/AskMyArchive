@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { documentsApi, type DocumentDto } from "@/lib/documents-api";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { usePreviewStore } from "@/lib/preview-store";
@@ -47,9 +48,13 @@ function StatusBadge({ doc }: { doc: DocumentDto }) {
 
 export function DocumentRow({
   doc,
+  selected,
+  onToggleSelect,
   onDeleted,
 }: {
   doc: DocumentDto;
+  selected: boolean;
+  onToggleSelect: () => void;
   onDeleted: () => void;
 }) {
   const t = useTranslations("documents");
@@ -76,6 +81,11 @@ export function DocumentRow({
 
   return (
     <div className="flex items-center gap-3 rounded-md border p-3">
+      <Checkbox
+        checked={selected}
+        onCheckedChange={onToggleSelect}
+        aria-label={t("selectRow", { name: doc.fileName })}
+      />
       <FileText className="size-5 shrink-0 text-muted-foreground" />
       <button
         type="button"

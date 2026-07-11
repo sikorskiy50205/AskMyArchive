@@ -11,10 +11,15 @@ namespace AskMyArchive.Api.Endpoints;
 public record DocumentDto(
     Guid Id, string FileName, long SizeBytes, string Status, string? Error, int PageCount, DateTimeOffset UploadedAt);
 
+public record DeleteBatchRequest(List<Guid> Ids);
+public record StorageDto(long UsedBytes, long LimitBytes);
+
 public static class DocumentEndpoints
 {
     private static readonly string[] AllowedExtensions = [".pdf", ".docx", ".txt", ".md"];
     private const long MaxFileSizeBytes = 50 * 1024 * 1024;
+    // Per-user storage quota. Portfolio-scale; bump if we ever host multi-tenant.
+    public const long StorageQuotaBytes = 100 * 1024 * 1024;
 
     public static void MapDocumentEndpoints(this IEndpointRouteBuilder app)
     {
@@ -22,6 +27,8 @@ public static class DocumentEndpoints
 
         group.MapPost("/", UploadAsync).DisableAntiforgery();
         group.MapGet("/", ListAsync);
+        group.MapGet("/storage", GetStorageAsync);
+        group.MapPost("/delete-batch", DeleteBatchAsync);
         group.MapGet("/{id:guid}", GetAsync);
         group.MapGet("/{id:guid}/file", GetFileAsync);
         group.MapGet("/{id:guid}/text", GetTextAsync);
@@ -79,6 +86,14 @@ public static class DocumentEndpoints
             return Results.BadRequest(new { error = "File is empty or larger than 50 MB." });
 
         var userId = principal.GetUserId();
+
+        // Reject uploads that would push the user over their per-account storage quota.
+        var currentUsage = await db.Documents
+            .Where(d => d.UserId == userId)
+            .SumAsync(d => d.SizeBytes, ct);
+        if (currentUsage + file.Length > StorageQuotaBytes)
+            return Results.BadRequest(new { error = "Storage quota exceeded." });
+
         var document = new ArchiveDocument
         {
             Id = Guid.NewGuid(),
@@ -107,6 +122,35 @@ public static class DocumentEndpoints
             .OrderByDescending(d => d.UploadedAt)
             .ToListAsync(ct);
         return Results.Ok(documents.Select(ToDto));
+    }
+
+    private static async Task<IResult> GetStorageAsync(
+        ClaimsPrincipal principal, AppDbContext db, CancellationToken ct)
+    {
+        var userId = principal.GetUserId();
+        var used = await db.Documents
+            .Where(d => d.UserId == userId)
+            .SumAsync(d => d.SizeBytes, ct);
+        return Results.Ok(new StorageDto(used, StorageQuotaBytes));
+    }
+
+    private static async Task<IResult> DeleteBatchAsync(
+        DeleteBatchRequest request, ClaimsPrincipal principal,
+        AppDbContext db, IFileStorage storage, CancellationToken ct)
+    {
+        if (request.Ids.Count == 0)
+            return Results.Ok(new { deleted = 0 });
+
+        var userId = principal.GetUserId();
+        var documents = await db.Documents
+            .Where(d => d.UserId == userId && request.Ids.Contains(d.Id))
+            .ToListAsync(ct);
+
+        db.Documents.RemoveRange(documents); // chunks cascade
+        await db.SaveChangesAsync(ct);
+        foreach (var doc in documents) storage.Delete(doc.StoragePath);
+
+        return Results.Ok(new { deleted = documents.Count });
     }
 
     private static async Task<IResult> GetAsync(Guid id, ClaimsPrincipal principal, AppDbContext db, CancellationToken ct)

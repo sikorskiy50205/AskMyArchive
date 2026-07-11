@@ -81,6 +81,7 @@
     "dropHint": "PDF, DOCX, TXT, MD — до 50 МБ",
     "uploadSuccess": "«{name}» загружен, начинаем индексацию",
     "uploadFailed": "Не удалось загрузить «{name}»",
+    "quotaExceeded": "«{name}»: превышена квота хранилища",
     "unsupportedType": "«{name}»: такой тип файла не поддерживается",
     "fileTooLarge": "«{name}»: файл пустой или больше 50 МБ",
     "emptyTitle": "Пока нет документов",
@@ -98,7 +99,29 @@
     "deleteConfirm": "Удалить",
     "deleteCancel": "Отмена",
     "deleteSuccess": "Документ удалён",
-    "deleteFailed": "Не удалось удалить документ"
+    "deleteFailed": "Не удалось удалить документ",
+    "selectRow": "Выбрать «{name}»",
+    "filter": {
+      "statusAll": "Любой статус",
+      "dateAll": "Любая дата",
+      "dateToday": "За сегодня",
+      "dateWeek": "За неделю",
+      "dateMonth": "За месяц"
+    },
+    "bulk": {
+      "selected": "{count, plural, one {Выбран # документ} few {Выбрано # документа} other {Выбрано # документов}}",
+      "cancel": "Отменить",
+      "deleteButton": "Удалить {count}",
+      "confirmTitle": "Удалить выбранные документы?",
+      "confirmDescription": "{count, plural, one {# документ и все его данные будут удалены навсегда.} few {# документа и все их данные будут удалены навсегда.} other {# документов и все их данные будут удалены навсегда.}}",
+      "confirmCancel": "Отмена",
+      "confirmDelete": "Удалить",
+      "deleteSuccess": "{count, plural, one {Удалён # документ} few {Удалено # документа} other {Удалено # документов}}",
+      "deleteFailed": "Не удалось удалить документы"
+    },
+    "quota": {
+      "label": "Хранилище"
+    }
   },
   "preview": {
     "pdfViewer": "Просмотр PDF",

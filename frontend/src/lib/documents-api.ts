@@ -17,10 +17,18 @@ export type DocumentDto = {
 export const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".txt", ".md"];
 export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
+export type Storage = { usedBytes: number; limitBytes: number };
+
 export const documentsApi = {
   list: () => apiFetch<DocumentDto[]>("/api/documents"),
   delete: (id: string) =>
     apiFetch<void>(`/api/documents/${id}`, { method: "DELETE" }),
+  deleteBatch: (ids: string[]) =>
+    apiFetch<{ deleted: number }>("/api/documents/delete-batch", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    }),
+  storage: () => apiFetch<Storage>("/api/documents/storage"),
 };
 
 export function hasPendingDocuments(docs: DocumentDto[] | undefined): boolean {

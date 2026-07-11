@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AskMyArchive.Api.Endpoints;
 
 public record AskRequest(string Question, Guid? ConversationId);
+public record RenameConversationRequest(string Title);
 
 public static class ChatEndpoints
 {
@@ -21,7 +22,9 @@ public static class ChatEndpoints
         group.MapPost("/ask", AskAsync);
         group.MapGet("/conversations", ListConversationsAsync);
         group.MapGet("/conversations/{id:guid}/messages", ListMessagesAsync);
+        group.MapPut("/conversations/{id:guid}", RenameConversationAsync);
         group.MapDelete("/conversations/{id:guid}", DeleteConversationAsync);
+        group.MapDelete("/conversations/{id:guid}/messages/last", DeleteLastExchangeAsync);
     }
 
     /// <summary>Answers a question over the user's archive, streaming tokens via server-sent events.</summary>
@@ -161,6 +164,46 @@ public static class ChatEndpoints
             return Results.NotFound();
 
         db.Conversations.Remove(conversation); // messages are removed by cascade delete
+        await db.SaveChangesAsync(ct);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> RenameConversationAsync(
+        Guid id, RenameConversationRequest request, ClaimsPrincipal principal,
+        AppDbContext db, CancellationToken ct)
+    {
+        var title = request.Title?.Trim() ?? string.Empty;
+        if (title.Length is 0 or > 200)
+            return Results.BadRequest(new { error = "Title must be 1–200 characters." });
+
+        var userId = principal.GetUserId();
+        var conversation = await db.Conversations
+            .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId, ct);
+        if (conversation is null)
+            return Results.NotFound();
+
+        conversation.Title = title;
+        await db.SaveChangesAsync(ct);
+        return Results.NoContent();
+    }
+
+    /// <summary>Removes the trailing assistant + user message pair. Used by the "Regenerate" button.</summary>
+    private static async Task<IResult> DeleteLastExchangeAsync(
+        Guid id, ClaimsPrincipal principal, AppDbContext db, CancellationToken ct)
+    {
+        var userId = principal.GetUserId();
+        var exists = await db.Conversations.AnyAsync(c => c.Id == id && c.UserId == userId, ct);
+        if (!exists) return Results.NotFound();
+
+        // The two most recent rows — assistant reply first, then the user question that produced it.
+        var lastTwo = await db.Messages
+            .Where(m => m.ConversationId == id)
+            .OrderByDescending(m => m.CreatedAt)
+            .Take(2)
+            .ToListAsync(ct);
+        if (lastTwo.Count == 0) return Results.NoContent();
+
+        db.Messages.RemoveRange(lastTwo);
         await db.SaveChangesAsync(ct);
         return Results.NoContent();
     }

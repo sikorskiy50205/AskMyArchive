@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -16,8 +17,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { chatApi } from "@/lib/chat-api";
+import { chatApi, type Conversation } from "@/lib/chat-api";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +33,7 @@ export function ConversationList({
   const t = useTranslations("chat");
   const locale = useLocale();
   const queryClient = useQueryClient();
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { data: conversations, isPending } = useQuery({
     queryKey: ["conversations"],
@@ -46,6 +49,16 @@ export function ConversationList({
       if (id === activeId) onSelect(null);
     },
     onError: () => toast.error(t("deleteFailed")),
+  });
+
+  const rename = useMutation({
+    mutationFn: ({ id, title }: { id: string; title: string }) =>
+      chatApi.renameConversation(id, title),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      setEditingId(null);
+    },
+    onError: () => toast.error(t("renameFailed")),
   });
 
   return (
@@ -73,59 +86,138 @@ export function ConversationList({
           </p>
         ) : (
           conversations?.map((conversation) => (
-            <div
+            <ConversationRow
               key={conversation.id}
-              className={cn(
-                "group flex items-center rounded-md",
-                conversation.id === activeId
-                  ? "bg-accent"
-                  : "hover:bg-accent/50",
-              )}
-            >
-              <button
-                type="button"
-                className="min-w-0 flex-1 px-2 py-2 text-left"
-                onClick={() => onSelect(conversation.id)}
-              >
-                <span className="block truncate text-sm">
-                  {conversation.title}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {formatDateTime(conversation.createdAt, locale)}
-                </span>
-              </button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="mr-1 size-7 shrink-0 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100"
-                  >
-                    <Trash2 className="size-3.5" />
-                    <span className="sr-only">{t("deleteTitle")}</span>
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t("deleteDescription", { title: conversation.title })}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t("deleteCancel")}</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => del.mutate(conversation.id)}
-                    >
-                      {t("deleteConfirm")}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
+              conversation={conversation}
+              active={conversation.id === activeId}
+              editing={editingId === conversation.id}
+              locale={locale}
+              onSelect={() => onSelect(conversation.id)}
+              onStartEdit={() => setEditingId(conversation.id)}
+              onCancelEdit={() => setEditingId(null)}
+              onSaveEdit={(title) => rename.mutate({ id: conversation.id, title })}
+              onDelete={() => del.mutate(conversation.id)}
+            />
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+function ConversationRow({
+  conversation,
+  active,
+  editing,
+  locale,
+  onSelect,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onDelete,
+}: {
+  conversation: Conversation;
+  active: boolean;
+  editing: boolean;
+  locale: string;
+  onSelect: () => void;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (title: string) => void;
+  onDelete: () => void;
+}) {
+  const t = useTranslations("chat");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState(conversation.title);
+
+  useEffect(() => {
+    if (editing) {
+      setDraft(conversation.title);
+      // Focus + select-all so users can just type over the auto-generated title.
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      });
+    }
+  }, [editing, conversation.title]);
+
+  function commit() {
+    const value = draft.trim();
+    if (value && value !== conversation.title) onSaveEdit(value);
+    else onCancelEdit();
+  }
+
+  if (editing) {
+    return (
+      <div className="rounded-md bg-accent px-2 py-1.5">
+        <Input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            else if (e.key === "Escape") onCancelEdit();
+          }}
+          className="h-7"
+          maxLength={200}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "group flex items-center rounded-md",
+        active ? "bg-accent" : "hover:bg-accent/50",
+      )}
+    >
+      <button
+        type="button"
+        className="min-w-0 flex-1 cursor-pointer px-2 py-2 text-left"
+        onClick={onSelect}
+      >
+        <span className="block truncate text-sm">{conversation.title}</span>
+        <span className="text-xs text-muted-foreground">
+          {formatDateTime(conversation.createdAt, locale)}
+        </span>
+      </button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-7 shrink-0 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100"
+        onClick={onStartEdit}
+      >
+        <Pencil className="size-3.5" />
+        <span className="sr-only">{t("renameTitle")}</span>
+      </Button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="mr-1 size-7 shrink-0 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100"
+          >
+            <Trash2 className="size-3.5" />
+            <span className="sr-only">{t("deleteTitle")}</span>
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("deleteDescription", { title: conversation.title })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("deleteCancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={onDelete}>
+              {t("deleteConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -26,6 +26,15 @@ export const chatApi = {
     apiFetch<ChatMessageDto[]>(`/api/conversations/${id}/messages`),
   deleteConversation: (id: string) =>
     apiFetch<void>(`/api/conversations/${id}`, { method: "DELETE" }),
+  renameConversation: (id: string, title: string) =>
+    apiFetch<void>(`/api/conversations/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ title }),
+    }),
+  deleteLastExchange: (id: string) =>
+    apiFetch<void>(`/api/conversations/${id}/messages/last`, {
+      method: "DELETE",
+    }),
 };
 
 export type AskHandlers = {

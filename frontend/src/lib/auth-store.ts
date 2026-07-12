@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-// TODO(auth-hardening): move to an HttpOnly refresh-token cookie once the
-// backend exposes /api/auth/refresh; localStorage is acceptable for now.
+// Access-token in localStorage, refresh-token in an HttpOnly cookie (see /api/auth/refresh).
+// Persisting the short-lived access token avoids a refresh round-trip on every page reload.
 type AuthState = {
   token: string | null;
   email: string | null;

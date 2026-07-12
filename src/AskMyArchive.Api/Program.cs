@@ -50,6 +50,9 @@ builder.Services.AddSingleton(jwt);
 
 var googleAuth = builder.Configuration.GetSection(GoogleAuthOptions.Section).Get<GoogleAuthOptions>() ?? new GoogleAuthOptions();
 builder.Services.AddSingleton(googleAuth);
+
+var refreshOptions = builder.Configuration.GetSection(RefreshTokenOptions.Section).Get<RefreshTokenOptions>() ?? new RefreshTokenOptions();
+builder.Services.AddSingleton(refreshOptions);
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
@@ -69,7 +72,9 @@ builder.Services.AddAuthorization();
 var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
                   ?? ["http://localhost:3000"];
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
-    policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod()));
+    // AllowCredentials is required so the browser sends the refresh cookie on /api/auth/refresh
+    // and /api/auth/logout. Origins must be explicit ("*" is incompatible with credentials).
+    policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 var app = builder.Build();
 

@@ -1,7 +1,5 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Net.Mail;
 using System.Security.Claims;
-using System.Text;
 using AskMyArchive.Core.Entities;
 using AskMyArchive.Core.Storage;
 using AskMyArchive.Infrastructure.Persistence;
@@ -9,7 +7,6 @@ using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 namespace AskMyArchive.Api.Auth;
 
@@ -28,6 +25,8 @@ public static class AuthEndpoints
         group.MapPost("/register", RegisterAsync);
         group.MapPost("/login", LoginAsync);
         group.MapPost("/google", GoogleLoginAsync);
+        group.MapPost("/refresh", RefreshAsync);
+        group.MapPost("/logout", LogoutAsync);
 
         var authed = group.MapGroup("/me").RequireAuthorization();
         authed.MapGet("/", GetMeAsync);
@@ -55,7 +54,9 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> LoginAsync(
-        LoginRequest request, AppDbContext db, IPasswordHasher<AppUser> hasher, JwtOptions jwt, CancellationToken ct)
+        LoginRequest request, HttpContext ctx, AppDbContext db,
+        IPasswordHasher<AppUser> hasher, JwtOptions jwt, RefreshTokenOptions refreshOptions,
+        CancellationToken ct)
     {
         var email = request.Email.Trim().ToLowerInvariant();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
@@ -63,12 +64,14 @@ public static class AuthEndpoints
             hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
             return Results.Unauthorized();
 
-        return Results.Ok(new { token = CreateToken(user, jwt) });
+        var token = await TokenIssuer.IssueTokenPairAsync(ctx, user, db, jwt, refreshOptions, ct);
+        return Results.Ok(new { token });
     }
 
     private static async Task<IResult> GoogleLoginAsync(
-        GoogleLoginRequest request, AppDbContext db, GoogleAuthOptions googleOptions,
-        JwtOptions jwt, ILoggerFactory loggerFactory, CancellationToken ct)
+        GoogleLoginRequest request, HttpContext ctx, AppDbContext db, GoogleAuthOptions googleOptions,
+        JwtOptions jwt, RefreshTokenOptions refreshOptions,
+        ILoggerFactory loggerFactory, CancellationToken ct)
     {
         var log = loggerFactory.CreateLogger("GoogleAuth");
         if (string.IsNullOrWhiteSpace(googleOptions.ClientId))
@@ -115,7 +118,58 @@ public static class AuthEndpoints
         }
 
         await db.SaveChangesAsync(ct);
-        return Results.Ok(new { token = CreateToken(user, jwt) });
+        var token = await TokenIssuer.IssueTokenPairAsync(ctx, user, db, jwt, refreshOptions, ct);
+        return Results.Ok(new { token });
+    }
+
+    private static async Task<IResult> RefreshAsync(
+        HttpContext ctx, AppDbContext db, JwtOptions jwt, RefreshTokenOptions refreshOptions,
+        CancellationToken ct)
+    {
+        if (!ctx.Request.Cookies.TryGetValue(refreshOptions.CookieName, out var rawToken) ||
+            string.IsNullOrEmpty(rawToken))
+            return Results.Unauthorized();
+
+        var hash = TokenIssuer.HashToken(rawToken);
+        var stored = await db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
+
+        if (stored is null || stored.RevokedAt is not null || stored.ExpiresAt <= DateTimeOffset.UtcNow)
+        {
+            TokenIssuer.ClearRefreshCookie(ctx.Response, refreshOptions);
+            return Results.Unauthorized();
+        }
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == stored.UserId, ct);
+        if (user is null)
+        {
+            TokenIssuer.ClearRefreshCookie(ctx.Response, refreshOptions);
+            return Results.Unauthorized();
+        }
+
+        // Rotate: revoke the presented token before issuing a new pair, so a stolen refresh token
+        // is single-use — a second use would find RevokedAt set and be rejected.
+        stored.RevokedAt = DateTimeOffset.UtcNow;
+        var token = await TokenIssuer.IssueTokenPairAsync(ctx, user, db, jwt, refreshOptions, ct);
+        return Results.Ok(new { token });
+    }
+
+    private static async Task<IResult> LogoutAsync(
+        HttpContext ctx, AppDbContext db, RefreshTokenOptions refreshOptions, CancellationToken ct)
+    {
+        if (ctx.Request.Cookies.TryGetValue(refreshOptions.CookieName, out var rawToken)
+            && !string.IsNullOrEmpty(rawToken))
+        {
+            var hash = TokenIssuer.HashToken(rawToken);
+            var stored = await db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
+            if (stored is not null && stored.RevokedAt is null)
+            {
+                stored.RevokedAt = DateTimeOffset.UtcNow;
+                await db.SaveChangesAsync(ct);
+            }
+        }
+
+        TokenIssuer.ClearRefreshCookie(ctx.Response, refreshOptions);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> GetMeAsync(
@@ -200,22 +254,4 @@ public static class AuthEndpoints
         return Results.NoContent();
     }
 
-    private static string CreateToken(AppUser user, JwtOptions jwt)
-    {
-        var claims = new[]
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email)
-        };
-        var credentials = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
-            SecurityAlgorithms.HmacSha256);
-        var token = new JwtSecurityToken(
-            issuer: jwt.Issuer,
-            audience: jwt.Audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(jwt.LifetimeMinutes),
-            signingCredentials: credentials);
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
 }

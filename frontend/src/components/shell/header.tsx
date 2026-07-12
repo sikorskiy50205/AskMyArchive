@@ -25,6 +25,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { authApi } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 
 export function Header() {
@@ -34,7 +35,14 @@ export function Header() {
   const clear = useAuthStore((s) => s.clear);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  function logout() {
+  async function logout() {
+    // Revoke the refresh token server-side so a stolen cookie is useless after logout;
+    // ignore failures — clearing local state and redirecting is still the right UX.
+    try {
+      await authApi.logout();
+    } catch {
+      // no-op
+    }
     clear();
     router.replace("/login");
   }

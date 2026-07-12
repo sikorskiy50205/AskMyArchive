@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IOptions<Embed
     public DbSet<DocumentChunk> Chunks => Set<DocumentChunk>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ChatMessage> Messages => Set<ChatMessage>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,6 +54,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IOptions<Embed
         {
             e.Property(m => m.Role).HasMaxLength(16);
             e.HasIndex(m => m.ConversationId);
+        });
+
+        modelBuilder.Entity<RefreshToken>(e =>
+        {
+            e.Property(t => t.TokenHash).HasMaxLength(64);
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => t.UserId);
         });
     }
 }

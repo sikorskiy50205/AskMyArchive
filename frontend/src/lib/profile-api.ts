@@ -6,6 +6,8 @@ export type Profile = {
   createdAt: string;
   documentCount: number;
   questionCount: number;
+  hasPassword: boolean;
+  hasGoogle: boolean;
 };
 
 export const profileApi = {
@@ -15,9 +17,10 @@ export const profileApi = {
       method: "PUT",
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
-  deleteAccount: (password: string) =>
+  deleteAccount: (password: string | null) =>
     apiFetch<void>("/api/auth/me/", {
       method: "DELETE",
+      // Backend accepts null password for Google-only accounts; JSON.stringify(null) is a valid body.
       body: JSON.stringify({ password }),
     }),
 };

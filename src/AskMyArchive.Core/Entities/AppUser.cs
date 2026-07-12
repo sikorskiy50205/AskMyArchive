@@ -4,6 +4,9 @@ public class AppUser
 {
     public Guid Id { get; set; }
     public required string Email { get; set; }
-    public required string PasswordHash { get; set; }
+    // Null for accounts that only sign in through an external provider (e.g. Google).
+    public string? PasswordHash { get; set; }
+    // Google "sub" claim; null unless the account is linked to Google sign-in.
+    public string? GoogleId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

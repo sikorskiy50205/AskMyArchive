@@ -67,8 +67,8 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <ChangePasswordCard />
-      <DeleteAccountCard />
+      {data?.hasPassword && <ChangePasswordCard />}
+      <DeleteAccountCard hasPassword={data?.hasPassword ?? true} />
     </div>
   );
 }

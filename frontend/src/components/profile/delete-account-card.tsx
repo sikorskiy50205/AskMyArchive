@@ -31,7 +31,7 @@ import { ApiError } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { profileApi } from "@/lib/profile-api";
 
-export function DeleteAccountCard() {
+export function DeleteAccountCard({ hasPassword }: { hasPassword: boolean }) {
   const t = useTranslations("profile.delete");
   const router = useRouter();
   const clearAuth = useAuthStore((s) => s.clear);
@@ -39,7 +39,7 @@ export function DeleteAccountCard() {
   const [open, setOpen] = useState(false);
 
   const del = useMutation({
-    mutationFn: () => profileApi.deleteAccount(password),
+    mutationFn: () => profileApi.deleteAccount(hasPassword ? password : null),
     onSuccess: () => {
       toast.success(t("success"));
       clearAuth();
@@ -75,28 +75,30 @@ export function DeleteAccountCard() {
             <AlertDialogHeader>
               <AlertDialogTitle>{t("confirmTitle")}</AlertDialogTitle>
               <AlertDialogDescription>
-                {t("confirmDescription")}
+                {hasPassword ? t("confirmDescription") : t("confirmDescriptionNoPassword")}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <div className="grid gap-2">
-              <Label htmlFor="deletePassword">{t("passwordLabel")}</Label>
-              <Input
-                id="deletePassword"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+            {hasPassword && (
+              <div className="grid gap-2">
+                <Label htmlFor="deletePassword">{t("passwordLabel")}</Label>
+                <Input
+                  id="deletePassword"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            )}
             <AlertDialogFooter>
               <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => {
                   // Keep the dialog open on error so the toast is visible.
                   e.preventDefault();
-                  if (password) del.mutate();
+                  if (!hasPassword || password) del.mutate();
                 }}
-                disabled={!password || del.isPending}
+                disabled={(hasPassword && !password) || del.isPending}
               >
                 {del.isPending && <Loader2 className="size-4 animate-spin" />}
                 {t("confirmButton")}

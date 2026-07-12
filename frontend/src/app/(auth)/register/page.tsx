@@ -21,8 +21,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { ApiError, authApi } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { readEmailFromJwt } from "@/lib/jwt";
 
 export default function RegisterPage() {
   const t = useTranslations("auth");
@@ -70,6 +72,18 @@ export default function RegisterPage() {
       } else {
         toast.error(t("errors.networkError"));
       }
+    },
+  });
+
+  const googleSignUp = useMutation({
+    mutationFn: (idToken: string) => authApi.google(idToken),
+    onSuccess: ({ token }) => {
+      setAuth(token, readEmailFromJwt(token) ?? "");
+      router.replace("/chat");
+    },
+    onError: (error) => {
+      if (error instanceof ApiError) toast.error(t("errors.serverError"));
+      else toast.error(t("errors.networkError"));
     },
   });
 
@@ -128,6 +142,16 @@ export default function RegisterPage() {
             {signUp.isPending && <Loader2 className="size-4 animate-spin" />}
             {t("registerButton")}
           </Button>
+          <div className="flex w-full items-center gap-3 text-xs uppercase text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            <span>{t("or")}</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+          <GoogleSignInButton
+            onCredential={(idToken) => googleSignUp.mutate(idToken)}
+            text="signup_with"
+            disabled={googleSignUp.isPending}
+          />
           <p className="text-sm text-muted-foreground">
             {t("haveAccount")}{" "}
             <Link href="/login" className="text-foreground underline">

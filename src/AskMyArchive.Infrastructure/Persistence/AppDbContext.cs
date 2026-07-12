@@ -22,6 +22,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IOptions<Embed
         {
             e.Property(u => u.Email).HasMaxLength(320);
             e.HasIndex(u => u.Email).IsUnique();
+            e.Property(u => u.GoogleId).HasMaxLength(64);
+            e.HasIndex(u => u.GoogleId).IsUnique();
         });
 
         modelBuilder.Entity<ArchiveDocument>(e =>

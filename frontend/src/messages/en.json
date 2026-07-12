@@ -32,6 +32,7 @@
     "haveAccount": "Already have an account?",
     "registerLink": "Sign up",
     "loginLink": "Sign in",
+    "or": "or",
     "registerSuccess": "Account created!",
     "errors": {
       "invalidEmail": "Enter a valid email",
@@ -164,6 +165,7 @@
       "button": "Delete account",
       "confirmTitle": "Delete your account?",
       "confirmDescription": "All documents, conversations and messages will be permanently removed. Enter your password to confirm.",
+      "confirmDescriptionNoPassword": "All documents, conversations and messages will be permanently removed. This cannot be undone.",
       "passwordLabel": "Password",
       "cancel": "Cancel",
       "confirmButton": "Delete permanently",

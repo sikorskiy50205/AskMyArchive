@@ -131,6 +131,11 @@ export default function LoginPage() {
             disabled={googleLogin.isPending}
           />
           <p className="text-sm text-muted-foreground">
+            <Link href="/forgot-password" className="text-foreground underline">
+              {t("forgotLink")}
+            </Link>
+          </p>
+          <p className="text-sm text-muted-foreground">
             {t("noAccount")}{" "}
             <Link href="/register" className="text-foreground underline">
               {t("registerLink")}

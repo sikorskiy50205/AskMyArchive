@@ -32,8 +32,37 @@
     "haveAccount": "Already have an account?",
     "registerLink": "Sign up",
     "loginLink": "Sign in",
+    "forgotLink": "Forgot password?",
     "or": "or",
     "registerSuccess": "Account created!",
+    "forgot": {
+      "title": "Forgot password?",
+      "subtitle": "Enter your email and we'll send a reset link.",
+      "submit": "Send reset link",
+      "backToLogin": "Back to sign in",
+      "sentTitle": "Check your inbox",
+      "sentDescription": "If the account exists and isn't Google-only, we've sent a password reset link. It's valid for 1 hour."
+    },
+    "reset": {
+      "title": "Set a new password",
+      "subtitle": "Choose a new password to sign in.",
+      "newPassword": "New password",
+      "submit": "Save password",
+      "successTitle": "Password updated",
+      "successDescription": "You can now sign in with the new password.",
+      "invalid": "This link is invalid or has expired.",
+      "invalidTitle": "Link doesn't work",
+      "requestNew": "Request a new link"
+    },
+    "confirm": {
+      "pendingTitle": "Confirming email…",
+      "successTitle": "Email confirmed",
+      "successDescription": "Thanks! All set.",
+      "continue": "Continue",
+      "errorTitle": "Could not confirm",
+      "errorDescription": "This link is invalid or has expired. Request a new one from your profile.",
+      "goToProfile": "Open profile"
+    },
     "errors": {
       "invalidEmail": "Enter a valid email",
       "passwordTooShort": "Password must be at least 8 characters",
@@ -144,6 +173,13 @@
   "profile": {
     "title": "Profile",
     "overview": "Overview",
+    "emailConfirm": {
+      "title": "Email not confirmed",
+      "description": "We sent you a confirmation link when you signed up. Didn't get it — hit \"Resend\".",
+      "resend": "Resend",
+      "resentToast": "Email sent",
+      "resendFailed": "Could not send the email"
+    },
     "emailLabel": "Email",
     "joinedLabel": "Joined",
     "documentsLabel": "Documents",

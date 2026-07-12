@@ -8,6 +8,7 @@ export type Profile = {
   questionCount: number;
   hasPassword: boolean;
   hasGoogle: boolean;
+  emailConfirmedAt: string | null;
 };
 
 export const profileApi = {
@@ -23,4 +24,6 @@ export const profileApi = {
       // Backend accepts null password for Google-only accounts; JSON.stringify(null) is a valid body.
       body: JSON.stringify({ password }),
     }),
+  sendConfirmation: () =>
+    apiFetch<void>("/api/auth/me/send-confirmation", { method: "POST" }),
 };

@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IOptions<Embed
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ChatMessage> Messages => Set<ChatMessage>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<AuthToken> AuthTokens => Set<AuthToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +62,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IOptions<Embed
             e.Property(t => t.TokenHash).HasMaxLength(64);
             e.HasIndex(t => t.TokenHash).IsUnique();
             e.HasIndex(t => t.UserId);
+        });
+
+        modelBuilder.Entity<AuthToken>(e =>
+        {
+            e.Property(t => t.TokenHash).HasMaxLength(64);
+            e.Property(t => t.Purpose).HasMaxLength(32);
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => new { t.UserId, t.Purpose });
         });
     }
 }

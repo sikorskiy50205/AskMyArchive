@@ -1,12 +1,14 @@
 using AskMyArchive.Core.Chunking;
 using AskMyArchive.Core.Indexing;
 using AskMyArchive.Core.Llm;
+using AskMyArchive.Core.Notifications;
 using AskMyArchive.Core.Parsing;
 using AskMyArchive.Core.Rag;
 using AskMyArchive.Core.Search;
 using AskMyArchive.Core.Storage;
 using AskMyArchive.Infrastructure.Indexing;
 using AskMyArchive.Infrastructure.Llm;
+using AskMyArchive.Infrastructure.Notifications;
 using AskMyArchive.Infrastructure.Options;
 using AskMyArchive.Infrastructure.Parsing;
 using AskMyArchive.Infrastructure.Persistence;
@@ -27,6 +29,8 @@ public static class DependencyInjection
         services.Configure<ChatOptions>(configuration.GetSection(ChatOptions.Section));
         services.Configure<EmbeddingOptions>(configuration.GetSection(EmbeddingOptions.Section));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.Section));
+        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.Section));
+        services.AddSingleton<IEmailSender, SmtpEmailSender>();
 
         var postgres = configuration.GetConnectionString("Postgres")
             ?? throw new InvalidOperationException("ConnectionStrings:Postgres is not configured.");

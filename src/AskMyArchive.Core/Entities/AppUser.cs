@@ -9,4 +9,6 @@ public class AppUser
     // Google "sub" claim; null unless the account is linked to Google sign-in.
     public string? GoogleId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    // Null until the user proves control of the mailbox (or signs in with Google, which verifies it).
+    public DateTimeOffset? EmailConfirmedAt { get; set; }
 }

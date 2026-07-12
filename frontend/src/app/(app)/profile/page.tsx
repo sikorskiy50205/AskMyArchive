@@ -5,6 +5,7 @@ import { FileText, Mail, MessagesSquare, Calendar } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { ChangePasswordCard } from "@/components/profile/change-password-card";
 import { DeleteAccountCard } from "@/components/profile/delete-account-card";
+import { EmailConfirmationBanner } from "@/components/profile/email-confirmation-banner";
 import {
   Card,
   CardContent,
@@ -27,6 +28,8 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <h1 className="text-xl font-semibold">{t("title")}</h1>
+
+      {data && !data.emailConfirmedAt && <EmailConfirmationBanner />}
 
       <Card>
         <CardHeader>

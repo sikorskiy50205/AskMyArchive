@@ -106,7 +106,10 @@ function isAuthPath(path: string): boolean {
     path === "/api/auth/register" ||
     path === "/api/auth/google" ||
     path === "/api/auth/refresh" ||
-    path === "/api/auth/logout"
+    path === "/api/auth/logout" ||
+    path === "/api/auth/forgot-password" ||
+    path === "/api/auth/reset-password" ||
+    path === "/api/auth/confirm-email"
   );
 }
 
@@ -128,4 +131,19 @@ export const authApi = {
     }),
   logout: () =>
     apiFetch<void>("/api/auth/logout", { method: "POST" }),
+  forgotPassword: (email: string) =>
+    apiFetch<void>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (token: string, newPassword: string) =>
+    apiFetch<void>("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
+    }),
+  confirmEmail: (token: string) =>
+    apiFetch<void>("/api/auth/confirm-email", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
 };

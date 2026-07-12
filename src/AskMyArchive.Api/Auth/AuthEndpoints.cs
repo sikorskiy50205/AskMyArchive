@@ -1,12 +1,15 @@
 using System.Net.Mail;
 using System.Security.Claims;
 using AskMyArchive.Core.Entities;
+using AskMyArchive.Core.Notifications;
 using AskMyArchive.Core.Storage;
+using AskMyArchive.Infrastructure.Options;
 using AskMyArchive.Infrastructure.Persistence;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AskMyArchive.Api.Auth;
 
@@ -15,6 +18,9 @@ public record LoginRequest(string Email, string Password);
 public record GoogleLoginRequest(string IdToken);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public record DeleteAccountRequest(string? Password);
+public record ForgotPasswordRequest(string Email);
+public record ResetPasswordRequest(string Token, string NewPassword);
+public record ConfirmEmailRequest(string Token);
 
 public static class AuthEndpoints
 {
@@ -27,28 +33,46 @@ public static class AuthEndpoints
         group.MapPost("/google", GoogleLoginAsync);
         group.MapPost("/refresh", RefreshAsync);
         group.MapPost("/logout", LogoutAsync);
+        group.MapPost("/forgot-password", ForgotPasswordAsync);
+        group.MapPost("/reset-password", ResetPasswordAsync);
+        group.MapPost("/confirm-email", ConfirmEmailAsync);
 
         var authed = group.MapGroup("/me").RequireAuthorization();
         authed.MapGet("/", GetMeAsync);
         authed.MapPut("/password", ChangePasswordAsync);
         authed.MapDelete("/", DeleteAccountAsync);
+        authed.MapPost("/send-confirmation", SendConfirmationAsync);
     }
 
     private static async Task<IResult> RegisterAsync(
-        RegisterRequest request, AppDbContext db, IPasswordHasher<AppUser> hasher, CancellationToken ct)
+        RegisterRequest request, AppDbContext db, IPasswordHasher<AppUser> hasher,
+        IEmailSender email, IOptions<EmailOptions> emailOpts, ILoggerFactory loggerFactory,
+        CancellationToken ct)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
-        if (!MailAddress.TryCreate(email, out _) || request.Password.Length < 8)
+        var normEmail = request.Email.Trim().ToLowerInvariant();
+        if (!MailAddress.TryCreate(normEmail, out _) || request.Password.Length < 8)
             return Results.BadRequest(new { error = "A valid email and a password of at least 8 characters are required." });
 
-        if (await db.Users.AnyAsync(u => u.Email == email, ct))
+        if (await db.Users.AnyAsync(u => u.Email == normEmail, ct))
             return Results.Conflict(new { error = "User already exists." });
 
-        var user = new AppUser { Id = Guid.NewGuid(), Email = email, PasswordHash = string.Empty };
+        var user = new AppUser { Id = Guid.NewGuid(), Email = normEmail, PasswordHash = null };
         user.PasswordHash = hasher.HashPassword(user, request.Password);
 
         db.Users.Add(user);
         await db.SaveChangesAsync(ct);
+
+        // Fire the confirmation email but don't fail registration if SMTP is down —
+        // the user can resend from the profile page.
+        try
+        {
+            await IssueAndSendConfirmationAsync(user, db, email, emailOpts.Value, ct);
+        }
+        catch (Exception ex)
+        {
+            loggerFactory.CreateLogger("AuthEmails").LogWarning(ex,
+                "Failed to send confirmation email to {Email}", user.Email);
+        }
 
         return Results.Created($"/api/users/{user.Id}", new { user.Id, user.Email });
     }
@@ -108,13 +132,26 @@ public static class AuthEndpoints
 
         if (user is null)
         {
-            user = new AppUser { Id = Guid.NewGuid(), Email = email, PasswordHash = null, GoogleId = googleId };
+            user = new AppUser
+            {
+                Id = Guid.NewGuid(),
+                Email = email,
+                PasswordHash = null,
+                GoogleId = googleId,
+                // Google has already verified the mailbox, no need for our own confirmation flow.
+                EmailConfirmedAt = DateTimeOffset.UtcNow
+            };
             db.Users.Add(user);
         }
-        else if (user.GoogleId is null)
+        else
         {
-            // Existing password account: link Google since Google confirmed the same verified email.
-            user.GoogleId = googleId;
+            if (user.GoogleId is null)
+            {
+                // Existing password account: link Google since Google confirmed the same verified email.
+                user.GoogleId = googleId;
+            }
+            // Same reasoning: once Google has verified this email, mark it confirmed on our side too.
+            user.EmailConfirmedAt ??= DateTimeOffset.UtcNow;
         }
 
         await db.SaveChangesAsync(ct);
@@ -193,7 +230,8 @@ public static class AuthEndpoints
             documentCount,
             questionCount,
             hasPassword = user.PasswordHash is not null,
-            hasGoogle = user.GoogleId is not null
+            hasGoogle = user.GoogleId is not null,
+            emailConfirmedAt = user.EmailConfirmedAt
         });
     }
 
@@ -254,4 +292,113 @@ public static class AuthEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> ForgotPasswordAsync(
+        ForgotPasswordRequest request, AppDbContext db,
+        IEmailSender emailSender, IOptions<EmailOptions> emailOpts, CancellationToken ct)
+    {
+        var normEmail = request.Email.Trim().ToLowerInvariant();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == normEmail, ct);
+
+        // Silent no-op for missing users and Google-only accounts — same 204 in every case
+        // so the endpoint doesn't leak which addresses are registered.
+        if (user is not null && user.PasswordHash is not null)
+        {
+            var (raw, hash) = TokenIssuer.GenerateRefreshToken();
+            db.AuthTokens.Add(new AuthToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TokenHash = hash,
+                Purpose = AuthTokenPurpose.PasswordReset,
+                ExpiresAt = DateTimeOffset.UtcNow.AddHours(1)
+            });
+            await db.SaveChangesAsync(ct);
+
+            var (subject, html, plain) = AuthEmailTemplates.PasswordResetEmail(emailOpts.Value.LinkBaseUrl, raw);
+            await emailSender.SendAsync(user.Email, subject, html, plain, ct);
+        }
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> ResetPasswordAsync(
+        ResetPasswordRequest request, AppDbContext db, IPasswordHasher<AppUser> hasher,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.Token) || request.NewPassword.Length < 8)
+            return Results.BadRequest(new { error = "A valid token and a password of at least 8 characters are required." });
+
+        var hash = TokenIssuer.HashToken(request.Token);
+        var token = await db.AuthTokens.FirstOrDefaultAsync(t =>
+            t.TokenHash == hash && t.Purpose == AuthTokenPurpose.PasswordReset, ct);
+        if (token is null || token.ConsumedAt is not null || token.ExpiresAt <= DateTimeOffset.UtcNow)
+            return Results.BadRequest(new { error = "This link is invalid or has expired." });
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == token.UserId, ct);
+        if (user is null) return Results.BadRequest(new { error = "This link is invalid or has expired." });
+
+        user.PasswordHash = hasher.HashPassword(user, request.NewPassword);
+        token.ConsumedAt = DateTimeOffset.UtcNow;
+
+        // Password reset invalidates every live refresh token for this user:
+        // typical scenario is an attacker holding a stolen session, and the reset should evict them.
+        var liveRefreshes = await db.RefreshTokens
+            .Where(t => t.UserId == user.Id && t.RevokedAt == null).ToListAsync(ct);
+        foreach (var t in liveRefreshes) t.RevokedAt = DateTimeOffset.UtcNow;
+
+        await db.SaveChangesAsync(ct);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> ConfirmEmailAsync(
+        ConfirmEmailRequest request, AppDbContext db, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.Token))
+            return Results.BadRequest(new { error = "A valid token is required." });
+
+        var hash = TokenIssuer.HashToken(request.Token);
+        var token = await db.AuthTokens.FirstOrDefaultAsync(t =>
+            t.TokenHash == hash && t.Purpose == AuthTokenPurpose.EmailConfirmation, ct);
+        if (token is null || token.ConsumedAt is not null || token.ExpiresAt <= DateTimeOffset.UtcNow)
+            return Results.BadRequest(new { error = "This link is invalid or has expired." });
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == token.UserId, ct);
+        if (user is null) return Results.BadRequest(new { error = "This link is invalid or has expired." });
+
+        user.EmailConfirmedAt ??= DateTimeOffset.UtcNow;
+        token.ConsumedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> SendConfirmationAsync(
+        ClaimsPrincipal principal, AppDbContext db,
+        IEmailSender emailSender, IOptions<EmailOptions> emailOpts, CancellationToken ct)
+    {
+        var userId = principal.GetUserId();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+        if (user is null) return Results.Unauthorized();
+        if (user.EmailConfirmedAt is not null) return Results.NoContent();
+
+        await IssueAndSendConfirmationAsync(user, db, emailSender, emailOpts.Value, ct);
+        return Results.NoContent();
+    }
+
+    private static async Task IssueAndSendConfirmationAsync(
+        AppUser user, AppDbContext db, IEmailSender emailSender, EmailOptions emailOpts, CancellationToken ct)
+    {
+        var (raw, hash) = TokenIssuer.GenerateRefreshToken();
+        db.AuthTokens.Add(new AuthToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            TokenHash = hash,
+            Purpose = AuthTokenPurpose.EmailConfirmation,
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(24)
+        });
+        await db.SaveChangesAsync(ct);
+
+        var (subject, html, plain) = AuthEmailTemplates.ConfirmationEmail(emailOpts.LinkBaseUrl, raw);
+        await emailSender.SendAsync(user.Email, subject, html, plain, ct);
+    }
 }

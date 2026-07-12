@@ -14,7 +14,7 @@ export type DocumentDto = {
 };
 
 // Mirror the server-side restrictions so obviously bad files fail fast.
-export const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".txt", ".md"];
+export const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".txt", ".md"];
 export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 export type Storage = { usedBytes: number; limitBytes: number };

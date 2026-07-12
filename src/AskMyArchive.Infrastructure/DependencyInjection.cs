@@ -50,7 +50,7 @@ public static class DependencyInjection
         services.AddSingleton<IDocumentParser, PlainTextParser>();
         services.AddSingleton<IDocumentParser, PdfParser>();
         services.AddSingleton<IDocumentParser, DocxParser>();
-        // TODO: port the xlsx parser (ClosedXML) from DeepSeekWebChat
+        services.AddSingleton<IDocumentParser, XlsxParser>();
 
         services.AddHttpClient<OpenAiCompatibleChatClient>();
         services.AddHttpClient<OpenAiCompatibleEmbeddingClient>();

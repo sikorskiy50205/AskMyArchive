@@ -121,7 +121,7 @@
     "title": "Документы",
     "searchPlaceholder": "Поиск по названию…",
     "dropHere": "Перетащите файлы сюда или нажмите, чтобы выбрать",
-    "dropHint": "PDF, DOCX, TXT, MD — до 50 МБ",
+    "dropHint": "PDF, DOCX, XLSX, TXT, MD — до 50 МБ",
     "uploadSuccess": "«{name}» загружен, начинаем индексацию",
     "uploadFailed": "Не удалось загрузить «{name}»",
     "quotaExceeded": "«{name}»: превышена квота хранилища",

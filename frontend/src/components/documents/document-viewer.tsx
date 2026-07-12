@@ -127,8 +127,10 @@ function TextBody({
     let cancelled = false;
     (async () => {
       try {
-        // Raw file works for txt/md; docx needs the parsed-text endpoint.
-        const endpoint = extension === ".docx" ? "text" : "file";
+        // Raw file works for txt/md; docx and xlsx need the parsed-text endpoint
+        // because the browser has no viewer for those formats.
+        const needsParsed = extension === ".docx" || extension === ".xlsx";
+        const endpoint = needsParsed ? "text" : "file";
         const response = await fetchAuthed(
           `/api/documents/${target.documentId}/${endpoint}`,
         );

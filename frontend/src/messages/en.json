@@ -121,7 +121,7 @@
     "title": "Documents",
     "searchPlaceholder": "Search by name…",
     "dropHere": "Drag files here or click to browse",
-    "dropHint": "PDF, DOCX, TXT, MD — up to 50 MB",
+    "dropHint": "PDF, DOCX, XLSX, TXT, MD — up to 50 MB",
     "uploadSuccess": "\"{name}\" uploaded, indexing started",
     "uploadFailed": "Failed to upload \"{name}\"",
     "quotaExceeded": "\"{name}\": storage quota exceeded",

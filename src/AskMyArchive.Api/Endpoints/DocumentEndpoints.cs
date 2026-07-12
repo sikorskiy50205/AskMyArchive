@@ -16,7 +16,7 @@ public record StorageDto(long UsedBytes, long LimitBytes);
 
 public static class DocumentEndpoints
 {
-    private static readonly string[] AllowedExtensions = [".pdf", ".docx", ".txt", ".md"];
+    private static readonly string[] AllowedExtensions = [".pdf", ".docx", ".xlsx", ".txt", ".md"];
     private const long MaxFileSizeBytes = 50 * 1024 * 1024;
     // Per-user storage quota. Portfolio-scale; bump if we ever host multi-tenant.
     public const long StorageQuotaBytes = 100 * 1024 * 1024;
@@ -39,6 +39,7 @@ public static class DocumentEndpoints
     {
         [".pdf"] = "application/pdf",
         [".docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        [".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         [".txt"] = "text/plain; charset=utf-8",
         [".md"] = "text/markdown; charset=utf-8",
     };

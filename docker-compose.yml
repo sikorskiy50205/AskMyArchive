@@ -40,7 +40,7 @@ services:
       ConnectionStrings__Redis: redis:6379
       Llm__Chat__BaseUrl: ${CHAT_BASE_URL:-https://api.deepseek.com/v1}
       Llm__Chat__ApiKey: ${CHAT_API_KEY:-}
-      Llm__Chat__Model: ${CHAT_MODEL:-deepseek-chat}
+      Llm__Chat__Model: ${CHAT_MODEL:-deepseek-v4-flash}
       Llm__Embeddings__BaseUrl: ${EMBEDDINGS_BASE_URL:-https://api.openai.com/v1}
       Llm__Embeddings__ApiKey: ${EMBEDDINGS_API_KEY:-}
       Llm__Embeddings__Model: ${EMBEDDINGS_MODEL:-text-embedding-3-small}

@@ -28,14 +28,19 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth").WithTags("Auth");
 
-        group.MapPost("/register", RegisterAsync);
-        group.MapPost("/login", LoginAsync);
-        group.MapPost("/google", GoogleLoginAsync);
+        // Credential endpoints are brute-force targets — 5 attempts/min per IP ("auth" policy
+        // in Program.cs). /refresh and /logout stay unthrottled: every active session calls
+        // them routinely, and both require a valid HttpOnly cookie anyway.
+        var throttled = group.MapGroup("").RequireRateLimiting("auth");
+        throttled.MapPost("/register", RegisterAsync);
+        throttled.MapPost("/login", LoginAsync);
+        throttled.MapPost("/google", GoogleLoginAsync);
+        throttled.MapPost("/forgot-password", ForgotPasswordAsync);
+        throttled.MapPost("/reset-password", ResetPasswordAsync);
+        throttled.MapPost("/confirm-email", ConfirmEmailAsync);
+
         group.MapPost("/refresh", RefreshAsync);
         group.MapPost("/logout", LogoutAsync);
-        group.MapPost("/forgot-password", ForgotPasswordAsync);
-        group.MapPost("/reset-password", ResetPasswordAsync);
-        group.MapPost("/confirm-email", ConfirmEmailAsync);
 
         var authed = group.MapGroup("/me").RequireAuthorization();
         authed.MapGet("/", GetMeAsync);

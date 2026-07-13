@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using AskMyArchive.Api.Auth;
 using AskMyArchive.Api.Endpoints;
 using AskMyArchive.Core.Entities;
@@ -46,6 +47,10 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddSingleton<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 
 var jwt = builder.Configuration.GetSection(JwtOptions.Section).Get<JwtOptions>() ?? new JwtOptions();
+// The key in appsettings.json is a placeholder for local development only.
+if (!builder.Environment.IsDevelopment() && jwt.Key == "dev-only-secret-change-me-0123456789abcdef")
+    throw new InvalidOperationException(
+        "Jwt:Key still has the development placeholder value. Set a real secret (user-secrets, env var or vault) before running outside Development.");
 builder.Services.AddSingleton(jwt);
 
 var googleAuth = builder.Configuration.GetSection(GoogleAuthOptions.Section).Get<GoogleAuthOptions>() ?? new GoogleAuthOptions();
@@ -76,6 +81,28 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     // and /api/auth/logout. Origins must be explicit ("*" is incompatible with credentials).
     policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
+// Brute-force protection for credential endpoints (see AuthEndpoints): 5 attempts per minute
+// per client IP. Behind a reverse proxy RemoteIpAddress is the proxy — add ForwardedHeaders
+// middleware before enabling this in such a deployment.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, ct) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(
+            """{"error":"Too many attempts. Try again in a minute."}""", ct);
+    };
+    options.AddPolicy("auth", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
+
 var app = builder.Build();
 
 // Apply any pending EF Core migrations on startup.
@@ -92,6 +119,7 @@ app.MapOpenApi();
 app.MapScalarApiReference(); // interactive API docs at /scalar/v1
 
 app.UseCors();
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -181,7 +181,15 @@
   },
   "preview": {
     "pdfViewer": "Просмотр PDF",
-    "empty": "Документ пуст"
+    "empty": "Документ пуст",
+    "search": {
+      "placeholder": "Поиск в документе…",
+      "counter": "{current} из {total}",
+      "noMatches": "не найдено",
+      "prev": "Предыдущее совпадение",
+      "next": "Следующее совпадение",
+      "clear": "Очистить поиск"
+    }
   },
   "profile": {
     "title": "Профиль",

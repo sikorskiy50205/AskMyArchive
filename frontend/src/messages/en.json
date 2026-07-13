@@ -181,7 +181,15 @@
   },
   "preview": {
     "pdfViewer": "PDF viewer",
-    "empty": "Document is empty"
+    "empty": "Document is empty",
+    "search": {
+      "placeholder": "Search in document…",
+      "counter": "{current} of {total}",
+      "noMatches": "no matches",
+      "prev": "Previous match",
+      "next": "Next match",
+      "clear": "Clear search"
+    }
   },
   "profile": {
     "title": "Profile",

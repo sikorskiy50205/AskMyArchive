@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   Dialog,
@@ -148,6 +148,37 @@ function TextBody({
 
   const isMarkdown = extension === ".md";
   const trimmed = useMemo(() => text?.trim() ?? "", [text]);
+  const [query, setQuery] = useState("");
+  const [matchIndex, setMatchIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const matches = useMemo(() => {
+    const q = query.trim();
+    if (!q || !text) return [];
+    const results: number[] = [];
+    const hay = text.toLowerCase();
+    const needle = q.toLowerCase();
+    let i = 0;
+    while ((i = hay.indexOf(needle, i)) !== -1) {
+      results.push(i);
+      i += needle.length;
+    }
+    return results;
+  }, [text, query]);
+
+  // Reset the pointer when the match set changes so we don't stay on a stale index.
+  useEffect(() => {
+    setMatchIndex(0);
+  }, [query]);
+
+  // Scroll the current match into the middle of the visible area.
+  useLayoutEffect(() => {
+    if (matches.length === 0) return;
+    const el = scrollRef.current?.querySelector<HTMLElement>(
+      `[data-match="${matchIndex}"]`,
+    );
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [matchIndex, matches.length]);
 
   if (text === null) {
     return (
@@ -164,17 +195,155 @@ function TextBody({
     );
   }
 
+  function step(dir: 1 | -1) {
+    if (matches.length === 0) return;
+    setMatchIndex((i) => (i + dir + matches.length) % matches.length);
+  }
+
+  // When searching, drop markdown rendering — highlighting a React tree of typed
+  // <h1>/<p>/<code> nodes is hairy; plain-text mode with <mark> is bulletproof.
+  const searching = matches.length > 0;
+  const content = searching
+    ? renderHighlighted(text, query, matchIndex)
+    : isMarkdown
+      ? (
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+          </div>
+        )
+      : (
+          <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">
+            {text}
+          </pre>
+        );
+
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto p-6">
-      {isMarkdown ? (
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
-        </div>
-      ) : (
-        <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">
-          {text}
-        </pre>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <SearchBar
+        query={query}
+        onChange={setQuery}
+        onNext={() => step(1)}
+        onPrev={() => step(-1)}
+        matchCount={matches.length}
+        currentIndex={matchIndex}
+      />
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-6">
+        {content}
+      </div>
+    </div>
+  );
+}
+
+function SearchBar({
+  query,
+  onChange,
+  onNext,
+  onPrev,
+  matchCount,
+  currentIndex,
+}: {
+  query: string;
+  onChange: (value: string) => void;
+  onNext: () => void;
+  onPrev: () => void;
+  matchCount: number;
+  currentIndex: number;
+}) {
+  const t = useTranslations("preview.search");
+  const hasQuery = query.trim().length > 0;
+  return (
+    <div className="flex items-center gap-2 border-b bg-background px-4 py-2">
+      <Search className="size-4 text-muted-foreground" />
+      <input
+        value={query}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={t("placeholder")}
+        className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.shiftKey ? onPrev() : onNext();
+          } else if (e.key === "Escape" && hasQuery) {
+            e.preventDefault();
+            onChange("");
+          }
+        }}
+      />
+      {hasQuery && (
+        <>
+          <span className="tabular-nums text-xs text-muted-foreground">
+            {matchCount > 0
+              ? t("counter", { current: currentIndex + 1, total: matchCount })
+              : t("noMatches")}
+          </span>
+          <button
+            type="button"
+            onClick={onPrev}
+            disabled={matchCount === 0}
+            className="rounded p-1 text-muted-foreground hover:bg-accent disabled:opacity-40"
+            aria-label={t("prev")}
+          >
+            <ChevronUp className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={matchCount === 0}
+            className="rounded p-1 text-muted-foreground hover:bg-accent disabled:opacity-40"
+            aria-label={t("next")}
+          >
+            <ChevronDown className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="rounded p-1 text-muted-foreground hover:bg-accent"
+            aria-label={t("clear")}
+          >
+            <X className="size-4" />
+          </button>
+        </>
       )}
     </div>
+  );
+}
+
+function renderHighlighted(
+  text: string,
+  query: string,
+  currentIndex: number,
+): React.ReactNode {
+  const q = query.trim();
+  const hay = text.toLowerCase();
+  const needle = q.toLowerCase();
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  let matchNo = 0;
+  let i = 0;
+  while ((i = hay.indexOf(needle, i)) !== -1) {
+    if (cursor < i) parts.push(text.substring(cursor, i));
+    const isCurrent = matchNo === currentIndex;
+    parts.push(
+      <mark
+        key={matchNo}
+        data-match={matchNo}
+        className={
+          isCurrent
+            ? "rounded bg-amber-400 text-black dark:bg-amber-500"
+            : "rounded bg-amber-200/70 text-inherit dark:bg-amber-500/30"
+        }
+      >
+        {text.substring(i, i + needle.length)}
+      </mark>,
+    );
+    cursor = i + needle.length;
+    i = cursor;
+    matchNo++;
+  }
+  if (cursor < text.length) parts.push(text.substring(cursor));
+  return (
+    <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">
+      {parts}
+    </pre>
   );
 }

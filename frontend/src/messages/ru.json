@@ -121,7 +121,7 @@
     "title": "Документы",
     "searchPlaceholder": "Поиск по названию…",
     "dropHere": "Перетащите файлы сюда или нажмите, чтобы выбрать",
-    "dropHint": "PDF, DOCX, XLSX, TXT, MD — до 50 МБ",
+    "dropHint": "PDF, DOCX, XLSX, TXT, MD, PNG/JPG (OCR) — до 50 МБ",
     "uploadSuccess": "«{name}» загружен, начинаем индексацию",
     "uploadFailed": "Не удалось загрузить «{name}»",
     "quotaExceeded": "«{name}»: превышена квота хранилища",
@@ -134,7 +134,20 @@
       "Uploaded": "В очереди",
       "Indexing": "Индексируется",
       "Indexed": "Готов",
-      "Failed": "Ошибка"
+      "Failed": "Ошибка",
+      "AwaitingOcr": "Нужно распознать"
+    },
+    "ocr": {
+      "recognizedLabel": "Распознанный текст",
+      "recognizing": "Распознаём…",
+      "emptyRecognition": "Текст не распознан. Можно вписать вручную или отменить.",
+      "save": "Сохранить и проиндексировать",
+      "cancel": "Отмена",
+      "saved": "Текст сохранён, индексируем",
+      "saveFailed": "Не удалось сохранить распознанный текст",
+      "deleteFailed": "Не удалось удалить документ",
+      "ocrFailed": "Не удалось распознать текст: {message}",
+      "imageLoadFailed": "Не удалось загрузить картинку: {message}"
     },
     "pages": "{count} стр.",
     "deleteTitle": "Удалить документ?",

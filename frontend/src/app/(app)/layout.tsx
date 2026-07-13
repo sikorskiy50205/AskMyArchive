@@ -2,6 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { DocumentViewer } from "@/components/documents/document-viewer";
+import { OcrModal } from "@/components/documents/ocr-modal";
 import { Header } from "@/components/shell/header";
 import { Sidebar } from "@/components/shell/sidebar";
 import { useAuthGuard } from "@/lib/use-auth-guard";
@@ -32,6 +33,7 @@ export default function AppLayout({
         </main>
       </div>
       <DocumentViewer />
+      <OcrModal />
     </div>
   );
 }

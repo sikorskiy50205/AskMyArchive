@@ -38,6 +38,8 @@ declare global {
 }
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+// Module-level flag: GSI holds a global singleton, calling initialize() again just logs a warning.
+let gsiInitialized = false;
 
 type Props = {
   onCredential: (idToken: string) => void;
@@ -51,18 +53,32 @@ export function GoogleSignInButton({ onCredential, text = "continue_with", disab
   const { resolvedTheme } = useTheme();
   const locale = useLocale();
 
+  // Route callbacks through a ref so identity changes in `onCredential` don't re-run any effect.
+  const callbackRef = useRef(onCredential);
+  useEffect(() => {
+    callbackRef.current = onCredential;
+  }, [onCredential]);
+
+  // Initialize GSI exactly once per page load. GSI keeps a global singleton;
+  // re-initialising on every re-render only produces a console warning.
+  useEffect(() => {
+    if (!scriptReady || !CLIENT_ID || gsiInitialized) return;
+    const gsi = window.google?.accounts.id;
+    if (!gsi) return;
+    gsi.initialize({
+      client_id: CLIENT_ID,
+      callback: (response) => {
+        if (response.credential) callbackRef.current(response.credential);
+      },
+    });
+    gsiInitialized = true;
+  }, [scriptReady]);
+
+  // Re-render the button when theme, locale or the "sign in / sign up" text changes.
   useEffect(() => {
     if (!scriptReady || !containerRef.current || !CLIENT_ID) return;
     const gsi = window.google?.accounts.id;
     if (!gsi) return;
-
-    gsi.initialize({
-      client_id: CLIENT_ID,
-      callback: (response) => {
-        if (response.credential) onCredential(response.credential);
-      },
-    });
-    // renderButton replaces the container's children each call — safe to re-run on theme/locale changes.
     containerRef.current.innerHTML = "";
     gsi.renderButton(containerRef.current, {
       type: "standard",
@@ -74,7 +90,7 @@ export function GoogleSignInButton({ onCredential, text = "continue_with", disab
       width: containerRef.current.offsetWidth || 320,
       locale,
     });
-  }, [scriptReady, resolvedTheme, locale, text, onCredential]);
+  }, [scriptReady, resolvedTheme, locale, text]);
 
   if (!CLIENT_ID) {
     // Silently render nothing when the env var isn't set — dev without a client id shouldn't crash.

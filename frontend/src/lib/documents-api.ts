@@ -1,7 +1,12 @@
 import { API_URL, ApiError, apiFetch } from "./api";
 import { useAuthStore } from "./auth-store";
 
-export type DocumentStatus = "Uploaded" | "Indexing" | "Indexed" | "Failed";
+export type DocumentStatus =
+  | "Uploaded"
+  | "Indexing"
+  | "Indexed"
+  | "Failed"
+  | "AwaitingOcr";
 
 export type DocumentDto = {
   id: string;
@@ -14,7 +19,18 @@ export type DocumentDto = {
 };
 
 // Mirror the server-side restrictions so obviously bad files fail fast.
-export const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".txt", ".md"];
+export const ALLOWED_EXTENSIONS = [
+  ".pdf",
+  ".docx",
+  ".xlsx",
+  ".txt",
+  ".md",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+];
+export const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
 export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
 export type Storage = { usedBytes: number; limitBytes: number };
@@ -29,6 +45,11 @@ export const documentsApi = {
       body: JSON.stringify({ ids }),
     }),
   storage: () => apiFetch<Storage>("/api/documents/storage"),
+  updateOcrText: (id: string, text: string) =>
+    apiFetch<void>(`/api/documents/${id}/ocr-text`, {
+      method: "PUT",
+      body: JSON.stringify({ text }),
+    }),
 };
 
 export function hasPendingDocuments(docs: DocumentDto[] | undefined): boolean {

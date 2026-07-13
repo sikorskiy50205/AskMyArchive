@@ -1,10 +1,14 @@
 using System.Security.Claims;
 using AskMyArchive.Api.Auth;
+using AskMyArchive.Core.Chunking;
 using AskMyArchive.Core.Entities;
 using AskMyArchive.Core.Indexing;
+using AskMyArchive.Core.Llm;
+using AskMyArchive.Core.Parsing;
 using AskMyArchive.Core.Storage;
 using AskMyArchive.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Pgvector;
 
 namespace AskMyArchive.Api.Endpoints;
 
@@ -13,11 +17,17 @@ public record DocumentDto(
 
 public record DeleteBatchRequest(List<Guid> Ids);
 public record StorageDto(long UsedBytes, long LimitBytes);
+public record OcrTextRequest(string Text);
 
 public static class DocumentEndpoints
 {
-    private static readonly string[] AllowedExtensions = [".pdf", ".docx", ".xlsx", ".txt", ".md"];
+    // Images bypass the parser pipeline: they land as AwaitingOcr, the browser runs Tesseract.js,
+    // and the recognised text comes back via PUT /api/documents/{id}/ocr-text.
+    private static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".webp"];
+    private static readonly string[] AllowedExtensions =
+        [".pdf", ".docx", ".xlsx", ".txt", ".md", .. ImageExtensions];
     private const long MaxFileSizeBytes = 50 * 1024 * 1024;
+    private const int MaxOcrTextChars = 500_000;
     // Per-user storage quota. Portfolio-scale; bump if we ever host multi-tenant.
     public const long StorageQuotaBytes = 100 * 1024 * 1024;
 
@@ -32,6 +42,7 @@ public static class DocumentEndpoints
         group.MapGet("/{id:guid}", GetAsync);
         group.MapGet("/{id:guid}/file", GetFileAsync);
         group.MapGet("/{id:guid}/text", GetTextAsync);
+        group.MapPut("/{id:guid}/ocr-text", UpdateOcrTextAsync);
         group.MapDelete("/{id:guid}", DeleteAsync);
     }
 
@@ -42,6 +53,10 @@ public static class DocumentEndpoints
         [".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         [".txt"] = "text/plain; charset=utf-8",
         [".md"] = "text/markdown; charset=utf-8",
+        [".png"] = "image/png",
+        [".jpg"] = "image/jpeg",
+        [".jpeg"] = "image/jpeg",
+        [".webp"] = "image/webp",
     };
 
     /// <summary>Streams the original uploaded file. Used by the browser's built-in PDF viewer.</summary>
@@ -108,11 +123,70 @@ public static class DocumentEndpoints
         await using (var content = file.OpenReadStream())
             document.StoragePath = await storage.SaveAsync(userId, document.Id, extension, content, ct);
 
+        // Images wait for the browser to do OCR; every other format goes straight into the queue.
+        var isImage = ImageExtensions.Contains(extension);
+        document.Status = isImage ? DocumentStatus.AwaitingOcr : DocumentStatus.Uploaded;
+
         db.Documents.Add(document);
         await db.SaveChangesAsync(ct);
-        await queue.EnqueueAsync(document.Id, ct);
+        if (!isImage) await queue.EnqueueAsync(document.Id, ct);
 
         return Results.Accepted($"/api/documents/{document.Id}", ToDto(document));
+    }
+
+    /// <summary>Store OCR text produced by the browser for an image document, then chunk + embed + index it.</summary>
+    private static async Task<IResult> UpdateOcrTextAsync(
+        Guid id, OcrTextRequest request, ClaimsPrincipal principal,
+        AppDbContext db, ITextChunker chunker, IEmbeddingClient embeddings, CancellationToken ct)
+    {
+        var userId = principal.GetUserId();
+        var document = await db.Documents.FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId, ct);
+        if (document is null) return Results.NotFound();
+        if (document.Status != DocumentStatus.AwaitingOcr)
+            return Results.BadRequest(new { error = "This document is not awaiting OCR." });
+        if (string.IsNullOrWhiteSpace(request.Text))
+            return Results.BadRequest(new { error = "Recognized text is empty." });
+        if (request.Text.Length > MaxOcrTextChars)
+            return Results.BadRequest(new { error = $"Recognized text exceeds {MaxOcrTextChars} characters." });
+
+        document.Status = DocumentStatus.Indexing;
+        await db.SaveChangesAsync(ct);
+
+        try
+        {
+            var parsed = new ParsedDocument([new ParsedPage(1, request.Text)]);
+            var chunks = chunker.Split(parsed);
+
+            const int embeddingBatchSize = 32;
+            var entities = new List<DocumentChunk>(chunks.Count);
+            foreach (var batch in chunks.Chunk(embeddingBatchSize))
+            {
+                var vectors = await embeddings.EmbedAsync(batch.Select(c => c.Text).ToList(), ct);
+                entities.AddRange(batch.Select((c, i) => new DocumentChunk
+                {
+                    Id = Guid.NewGuid(),
+                    DocumentId = document.Id,
+                    Index = c.Index,
+                    Page = c.Page,
+                    Text = c.Text,
+                    Embedding = new Vector(vectors[i])
+                }));
+            }
+
+            db.Chunks.AddRange(entities);
+            document.PageCount = parsed.Pages.Count;
+            document.Status = DocumentStatus.Indexed;
+            document.Error = null;
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        }
+        catch (Exception ex)
+        {
+            document.Status = DocumentStatus.Failed;
+            document.Error = ex.Message;
+            await db.SaveChangesAsync(ct);
+            return Results.Problem(ex.Message);
+        }
     }
 
     private static async Task<IResult> ListAsync(ClaimsPrincipal principal, AppDbContext db, CancellationToken ct)

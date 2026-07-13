@@ -36,7 +36,7 @@ export function DocumentViewer() {
 
   return (
     <Dialog open={!!target} onOpenChange={(open) => !open && close()}>
-      <DialogContent className="flex h-[90vh] max-w-4xl flex-col p-0">
+      <DialogContent className="flex h-[90vh] w-[95vw] max-w-[80rem] flex-col p-0 sm:max-w-[80rem]">
         <DialogHeader className="border-b px-4 py-3">
           <DialogTitle className="truncate">{target?.fileName}</DialogTitle>
         </DialogHeader>
@@ -127,9 +127,10 @@ function TextBody({
     let cancelled = false;
     (async () => {
       try {
-        // Raw file works for txt/md; docx and xlsx need the parsed-text endpoint
-        // because the browser has no viewer for those formats.
-        const needsParsed = extension === ".docx" || extension === ".xlsx";
+        // Raw file works for txt/md; docx, xlsx and images (post-OCR) need the
+        // parsed-text endpoint — the image bytes would just render as garbage.
+        const parsedFormats = [".docx", ".xlsx", ".png", ".jpg", ".jpeg", ".webp"];
+        const needsParsed = parsedFormats.includes(extension);
         const endpoint = needsParsed ? "text" : "file";
         const response = await fetchAuthed(
           `/api/documents/${target.documentId}/${endpoint}`,

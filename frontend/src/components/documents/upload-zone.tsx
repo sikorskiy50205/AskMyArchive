@@ -9,9 +9,11 @@ import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   ALLOWED_EXTENSIONS,
+  IMAGE_EXTENSIONS,
   MAX_FILE_SIZE_BYTES,
   uploadDocument,
 } from "@/lib/documents-api";
+import { useOcrStore } from "@/lib/ocr-store";
 
 type Upload = { key: number; name: string; progress: number };
 
@@ -21,6 +23,7 @@ export function UploadZone({ onUploaded }: { onUploaded: () => void }) {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const nextKey = useRef(0);
+  const openOcr = useOcrStore((s) => s.open);
 
   function handleFiles(files: FileList | null) {
     if (!files) return;
@@ -40,15 +43,20 @@ export function UploadZone({ onUploaded }: { onUploaded: () => void }) {
     }
 
     const key = nextKey.current++;
+    const isImage = IMAGE_EXTENSIONS.includes(extension);
     setUploads((u) => [...u, { key, name: file.name, progress: 0 }]);
     try {
-      await uploadDocument(file, (progress) =>
+      const uploaded = await uploadDocument(file, (progress) =>
         setUploads((u) =>
           u.map((x) => (x.key === key ? { ...x, progress } : x)),
         ),
       );
       toast.success(t("uploadSuccess", { name: file.name }));
       onUploaded();
+      // Images land as AwaitingOcr — jump straight into the recognise-and-review modal.
+      if (isImage) {
+        openOcr({ documentId: uploaded.id, fileName: uploaded.fileName });
+      }
     } catch (error) {
       if (
         error instanceof ApiError &&

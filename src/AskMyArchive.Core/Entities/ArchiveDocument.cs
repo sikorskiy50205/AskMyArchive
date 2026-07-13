@@ -5,7 +5,9 @@ public enum DocumentStatus
     Uploaded,
     Indexing,
     Indexed,
-    Failed
+    Failed,
+    // Image uploads sit here until the browser sends back OCR text via /api/documents/{id}/ocr-text.
+    AwaitingOcr
 }
 
 public class ArchiveDocument

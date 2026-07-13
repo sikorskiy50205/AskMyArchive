@@ -121,7 +121,7 @@
     "title": "Documents",
     "searchPlaceholder": "Search by name…",
     "dropHere": "Drag files here or click to browse",
-    "dropHint": "PDF, DOCX, XLSX, TXT, MD — up to 50 MB",
+    "dropHint": "PDF, DOCX, XLSX, TXT, MD, PNG/JPG (OCR) — up to 50 MB",
     "uploadSuccess": "\"{name}\" uploaded, indexing started",
     "uploadFailed": "Failed to upload \"{name}\"",
     "quotaExceeded": "\"{name}\": storage quota exceeded",
@@ -134,7 +134,20 @@
       "Uploaded": "Queued",
       "Indexing": "Indexing",
       "Indexed": "Ready",
-      "Failed": "Failed"
+      "Failed": "Failed",
+      "AwaitingOcr": "Needs OCR"
+    },
+    "ocr": {
+      "recognizedLabel": "Recognized text",
+      "recognizing": "Running OCR…",
+      "emptyRecognition": "No text was recognized. Type it manually or cancel.",
+      "save": "Save and index",
+      "cancel": "Cancel",
+      "saved": "Text saved, indexing",
+      "saveFailed": "Failed to save the recognized text",
+      "deleteFailed": "Failed to delete the document",
+      "ocrFailed": "OCR failed: {message}",
+      "imageLoadFailed": "Failed to load the image: {message}"
     },
     "pages": "{count} pages",
     "deleteTitle": "Delete document?",

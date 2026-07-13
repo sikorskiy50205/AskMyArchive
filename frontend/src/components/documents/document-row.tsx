@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { documentsApi, type DocumentDto } from "@/lib/documents-api";
 import { formatBytes, formatDateTime } from "@/lib/format";
+import { useOcrStore } from "@/lib/ocr-store";
 import { usePreviewStore } from "@/lib/preview-store";
 
 function StatusBadge({ doc }: { doc: DocumentDto }) {
@@ -41,6 +42,8 @@ function StatusBadge({ doc }: { doc: DocumentDto }) {
           {t("Failed")}
         </Badge>
       );
+    case "AwaitingOcr":
+      return <Badge variant="outline">{t("AwaitingOcr")}</Badge>;
     default:
       return <Badge variant="outline">{t("Uploaded")}</Badge>;
   }
@@ -60,7 +63,10 @@ export function DocumentRow({
   const t = useTranslations("documents");
   const locale = useLocale();
   const openPreview = usePreviewStore((s) => s.open);
-  const canPreview = doc.status === "Indexed" || doc.status === "Indexing";
+  const openOcr = useOcrStore((s) => s.open);
+  const isAwaitingOcr = doc.status === "AwaitingOcr";
+  const canPreview =
+    doc.status === "Indexed" || doc.status === "Indexing" || isAwaitingOcr;
 
   const del = useMutation({
     mutationFn: () => documentsApi.delete(doc.id),
@@ -90,9 +96,10 @@ export function DocumentRow({
       <button
         type="button"
         disabled={!canPreview}
-        onClick={() =>
-          openPreview({ documentId: doc.id, fileName: doc.fileName })
-        }
+        onClick={() => {
+          const payload = { documentId: doc.id, fileName: doc.fileName };
+          isAwaitingOcr ? openOcr(payload) : openPreview(payload);
+        }}
         className="min-w-0 flex-1 cursor-pointer text-left disabled:cursor-default"
       >
         <p className="truncate text-sm font-medium underline-offset-2 group-enabled:hover:underline">

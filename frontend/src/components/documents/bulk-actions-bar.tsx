@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
@@ -28,7 +27,6 @@ export function BulkActionsBar({
   deleting: boolean;
 }) {
   const t = useTranslations("documents.bulk");
-  const [open, setOpen] = useState(false);
 
   const empty = count === 0;
 
@@ -48,10 +46,14 @@ export function BulkActionsBar({
           <X className="size-4" />
           {t("cancel")}
         </Button>
-        <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" disabled={empty}>
-              <Trash2 className="size-4" />
+            <Button variant="destructive" size="sm" disabled={empty || deleting}>
+              {deleting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
               {t("deleteButton", { count })}
             </Button>
           </AlertDialogTrigger>
@@ -64,14 +66,11 @@ export function BulkActionsBar({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t("confirmCancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={(e) => {
-                  e.preventDefault();
-                  onConfirmDelete();
-                }}
-                disabled={deleting}
-              >
-                {deleting && <Loader2 className="size-4 animate-spin" />}
+              {/* No preventDefault here: the dialog must close on confirm (Radix default).
+                  Holding it open is only for flows that surface errors inside the dialog,
+                  like DeleteAccountCard — with it, the dialog re-renders over the emptied
+                  selection as an endless "delete 0 documents" prompt. */}
+              <AlertDialogAction onClick={onConfirmDelete}>
                 {t("confirmDelete")}
               </AlertDialogAction>
             </AlertDialogFooter>

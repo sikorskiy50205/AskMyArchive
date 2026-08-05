@@ -15,7 +15,7 @@
 
 </div>
 
-<video src="https://github.com/user-attachments/assets/a9d371bc-70db-4c3f-a32a-86ed35deb1c0">
+<video src="https://github.com/user-attachments/assets/a9d371bc-70db-4c3f-a32a-86ed35deb1c0"></video>
 
 ---
 

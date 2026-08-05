@@ -15,8 +15,7 @@
 
 </div>
 
-<video src="https://github.com/user-attachments/assets/0ef1cad1-b863-4524-a38e-65483256c8ad"
-       poster="img/preview.png" controls></video>
+<video src="https://github.com/user-attachments/assets/a9d371bc-70db-4c3f-a32a-86ed35deb1c0">
 
 ---
 

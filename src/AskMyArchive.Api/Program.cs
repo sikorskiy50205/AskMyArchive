@@ -17,9 +17,11 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Kestrel's default request-body cap is 30 MB, but DocumentEndpoints accepts uploads up to
-// 50 MB. Without this override any 30–50 MB file fails with a 413 before the app-level
-// check can even run. 60 MB leaves ~10 MB of headroom for multipart boundaries and headers.
+// The user-facing upload limit is 50 MB, enforced by DocumentEndpoints. Kestrel's default
+// cap is only 30 MB, so without this override any file between 30 and 50 MB would fail
+// with a 413 before the app-level check even runs. Raise Kestrel to 60 MB — that is not
+// a new limit, it just gives the 50 MB check headroom for multipart boundaries and headers
+// so the app-level rejection (with its intended error message) always fires first.
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 60 * 1024 * 1024);
 
 builder.Host.UseSerilog((context, loggerConfig) => loggerConfig

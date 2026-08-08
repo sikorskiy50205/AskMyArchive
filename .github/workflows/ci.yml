@@ -25,3 +25,32 @@ jobs:
         run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
         env:
           RUN_INTEGRATION_TESTS: "1"
+
+      # dotnet list --vulnerable prints a report but exits 0 even when hits are found,
+      # so grep the output and fail the job ourselves.
+      - name: Check for vulnerable NuGet packages
+        run: |
+          set -euo pipefail
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee vuln.log
+          if grep -q "has the following vulnerable" vuln.log; then
+            echo "::error::Vulnerable NuGet packages found — see log above"
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      # --omit=dev skips devDependencies (build tooling, linters) so we only fail on
+      # vulnerabilities in what actually ships to users. --audit-level=high ignores
+      # low/moderate churn that isn't worth breaking the build for.
+      - name: Audit frontend production dependencies
+        run: npm audit --audit-level=high --omit=dev
+        working-directory: frontend

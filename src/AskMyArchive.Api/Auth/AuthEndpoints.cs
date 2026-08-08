@@ -24,6 +24,14 @@ public record ConfirmEmailRequest(string Token);
 
 public static class AuthEndpoints
 {
+    // Pre-computed PBKDF2 hash used to keep /login timing constant when the user does not
+    // exist or has no password (Google-only account). Without this, missing-user responses
+    // return immediately while real ones spend ~50 ms hashing — a reliable enumeration
+    // side-channel. The value itself is meaningless: we only care that verifying against
+    // it takes the same time as verifying against a real hash.
+    private static readonly string DummyPasswordHash =
+        new PasswordHasher<AppUser>().HashPassword(new AppUser(), "constant-time-guard-nonce");
+
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/auth").WithTags("Auth");
@@ -89,8 +97,13 @@ public static class AuthEndpoints
     {
         var email = request.Email.Trim().ToLowerInvariant();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
-        if (user is null || user.PasswordHash is null ||
-            hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
+
+        // Always run the verifier, even for missing / password-less users, so the response
+        // time does not reveal which emails are registered. See DummyPasswordHash above.
+        var hashToCheck = user?.PasswordHash ?? DummyPasswordHash;
+        var verification = hasher.VerifyHashedPassword(user ?? new AppUser(), hashToCheck, request.Password);
+
+        if (user is null || user.PasswordHash is null || verification == PasswordVerificationResult.Failed)
             return Results.Unauthorized();
 
         var token = await TokenIssuer.IssueTokenPairAsync(ctx, user, db, jwt, refreshOptions, ct);

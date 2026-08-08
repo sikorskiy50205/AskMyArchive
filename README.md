@@ -17,6 +17,9 @@
 
 <video src="https://github.com/user-attachments/assets/a9d371bc-70db-4c3f-a32a-86ed35deb1c0" controls></video>
 
+- ⚙️ **[Быстрый запуск  (5 мин)](https://youtu.be/LXtqGE3MoYA)** — поднять локально одной командой через docker compose
+- 🎬 **[Демо  (5 мин)](https://youtu.be/hQjMl7B5dfo)** — как загрузить документы, задать вопрос и получить ответ со ссылками на страницы
+
 ---
 
 ## Оглавление

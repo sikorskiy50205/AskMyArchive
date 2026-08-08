@@ -19,7 +19,8 @@ public static class ChatEndpoints
     {
         var group = app.MapGroup("/api").WithTags("Chat").RequireAuthorization();
 
-        group.MapPost("/ask", AskAsync);
+        // Per-user quota — see the "ask" policy in Program.cs. Keeps LLM spend bounded.
+        group.MapPost("/ask", AskAsync).RequireRateLimiting("ask");
         group.MapGet("/conversations", ListConversationsAsync);
         group.MapGet("/conversations/{id:guid}/messages", ListMessagesAsync);
         group.MapPut("/conversations/{id:guid}", RenameConversationAsync);

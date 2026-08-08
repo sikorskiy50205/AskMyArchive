@@ -126,6 +126,23 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1)
             }));
+
+    // /api/ask fans out to a paid LLM per call. Cap each authenticated user at 30 requests
+    // per minute — comfortable for real use, but keeps a runaway script from spending the
+    // budget. Falls back to IP for anonymous callers, though /api/ask already requires auth.
+    options.AddPolicy("ask", context =>
+    {
+        var partitionKey = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                        ?? context.User.FindFirst("sub")?.Value
+                        ?? context.Connection.RemoteIpAddress?.ToString()
+                        ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1)
+            });
+    });
 });
 
 var app = builder.Build();
@@ -167,10 +184,11 @@ app.Use(async (context, next) =>
     await next();
 });
 
-app.UseRateLimiter();
-
+// Authentication must run before the rate limiter so the "ask" policy can partition by
+// the authenticated user id, not by (proxy-shared) client IP.
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health");
 app.MapAuthEndpoints();

@@ -115,8 +115,13 @@ if (app.Configuration.GetValue("Database:AutoMigrate", defaultValue: true))
 
 app.UseSerilogRequestLogging();
 
-app.MapOpenApi();
-app.MapScalarApiReference(); // interactive API docs at /scalar/v1
+// The OpenAPI document and the Scalar UI enumerate every endpoint and its shape;
+// that is helpful in Development but pure attack-surface reconnaissance in production.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference(); // interactive API docs at /scalar/v1
+}
 
 app.UseCors();
 app.UseRateLimiter();

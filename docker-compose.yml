@@ -35,7 +35,10 @@ services:
       redis:
         condition: service_started
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      # Production so the JWT dev-key guard in Program.cs actually fires here.
+      ASPNETCORE_ENVIRONMENT: Production
+      # Refuse to start without a real signing key. Generate one with: openssl rand -base64 48
+      Jwt__Key: ${JWT_KEY:?JWT_KEY must be set to a random 32+ byte secret (generate with: openssl rand -base64 48)}
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=askmyarchive;Username=postgres;Password=postgres
       ConnectionStrings__Redis: redis:6379
       Llm__Chat__BaseUrl: ${CHAT_BASE_URL:-https://api.deepseek.com/v1}

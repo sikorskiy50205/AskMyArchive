@@ -130,7 +130,8 @@ flowchart LR
 git clone https://github.com/sikorskiy50205/AskMyArchive.git
 cd AskMyArchive
 
-# Ключ DeepSeek + любой OpenAI-совместимый ключ для эмбеддингов
+# Секрет подписи JWT + ключ DeepSeek + любой OpenAI-совместимый ключ для эмбеддингов
+JWT_KEY=$(openssl rand -base64 48) \
 CHAT_API_KEY=sk-deepseek-... \
 EMBEDDINGS_API_KEY=sk-openai-... \
 docker compose up --build

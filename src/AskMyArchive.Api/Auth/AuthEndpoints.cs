@@ -24,13 +24,14 @@ public record ConfirmEmailRequest(string Token);
 
 public static class AuthEndpoints
 {
-    // Pre-computed PBKDF2 hash used to keep /login timing constant when the user does not
+    // Placeholder user + hash used to keep /login timing constant when the user does not
     // exist or has no password (Google-only account). Without this, missing-user responses
     // return immediately while real ones spend ~50 ms hashing — a reliable enumeration
-    // side-channel. The value itself is meaningless: we only care that verifying against
-    // it takes the same time as verifying against a real hash.
+    // side-channel. `PasswordHasher` ignores the user parameter in its default v3 format,
+    // so the empty email is fine; it only exists to satisfy AppUser.Email's `required` modifier.
+    private static readonly AppUser DummyUser = new() { Email = string.Empty };
     private static readonly string DummyPasswordHash =
-        new PasswordHasher<AppUser>().HashPassword(new AppUser(), "constant-time-guard-nonce");
+        new PasswordHasher<AppUser>().HashPassword(DummyUser, "constant-time-guard-nonce");
 
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
@@ -101,7 +102,7 @@ public static class AuthEndpoints
         // Always run the verifier, even for missing / password-less users, so the response
         // time does not reveal which emails are registered. See DummyPasswordHash above.
         var hashToCheck = user?.PasswordHash ?? DummyPasswordHash;
-        var verification = hasher.VerifyHashedPassword(user ?? new AppUser(), hashToCheck, request.Password);
+        var verification = hasher.VerifyHashedPassword(user ?? DummyUser, hashToCheck, request.Password);
 
         if (user is null || user.PasswordHash is null || verification == PasswordVerificationResult.Failed)
             return Results.Unauthorized();

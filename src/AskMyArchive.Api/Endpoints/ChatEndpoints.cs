@@ -15,6 +15,12 @@ public record RenameConversationRequest(string Title);
 
 public static class ChatEndpoints
 {
+    // Bounds a single question to keep one request from ballooning the embedding + prompt
+    // token cost. The per-user rate limit ("ask" policy) caps request frequency; this caps
+    // per-request weight. 4000 chars comfortably fits a paragraph of context pasted into
+    // the question; anything beyond that is either abuse or should be uploaded as a document.
+    private const int MaxQuestionChars = 4000;
+
     public static void MapChatEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api").WithTags("Chat").RequireAuthorization();
@@ -37,6 +43,13 @@ public static class ChatEndpoints
         {
             http.Response.StatusCode = StatusCodes.Status400BadRequest;
             await http.Response.WriteAsJsonAsync(new { error = "Question must not be empty." }, ct);
+            return;
+        }
+        if (request.Question.Length > MaxQuestionChars)
+        {
+            http.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await http.Response.WriteAsJsonAsync(
+                new { error = $"Question must be {MaxQuestionChars} characters or fewer." }, ct);
             return;
         }
 

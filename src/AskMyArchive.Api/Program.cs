@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using System.Threading.RateLimiting;
 using AskMyArchive.Api.Auth;
@@ -6,6 +7,7 @@ using AskMyArchive.Core.Entities;
 using AskMyArchive.Infrastructure;
 using AskMyArchive.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -86,9 +88,27 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     // and /api/auth/logout. Origins must be explicit ("*" is incompatible with credentials).
     policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
+// Trust X-Forwarded-For / X-Forwarded-Proto only from explicitly listed proxy IPs. Left
+// empty in the demo, so the middleware is skipped and RemoteIpAddress stays honest for
+// local runs. In production, list the reverse proxy's IPs in ForwardedHeaders:KnownProxies
+// so the credential rate limiter partitions by the real client, not by the proxy.
+var trustedProxies = builder.Configuration
+    .GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+if (trustedProxies.Length > 0)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownProxies.Clear();
+        options.KnownNetworks.Clear();
+        foreach (var proxy in trustedProxies)
+            if (IPAddress.TryParse(proxy, out var address))
+                options.KnownProxies.Add(address);
+    });
+}
+
 // Brute-force protection for credential endpoints (see AuthEndpoints): 5 attempts per minute
-// per client IP. Behind a reverse proxy RemoteIpAddress is the proxy — add ForwardedHeaders
-// middleware before enabling this in such a deployment.
+// per client IP. Behind a reverse proxy the partition key comes from ForwardedHeaders above.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -117,6 +137,12 @@ if (app.Configuration.GetValue("Database:AutoMigrate", defaultValue: true))
     using var scope = app.Services.CreateScope();
     await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
 }
+
+// Must run before anything that reads Request.Scheme or Connection.RemoteIpAddress
+// (SerilogRequestLogging, the rate limiter, cookie writers). No-op when the trusted-proxies
+// list is empty, so local runs are unaffected.
+if (trustedProxies.Length > 0)
+    app.UseForwardedHeaders();
 
 app.UseSerilogRequestLogging();
 

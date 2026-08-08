@@ -137,7 +137,8 @@ public static class DocumentEndpoints
     /// <summary>Store OCR text produced by the browser for an image document, then chunk + embed + index it.</summary>
     private static async Task<IResult> UpdateOcrTextAsync(
         Guid id, OcrTextRequest request, ClaimsPrincipal principal,
-        AppDbContext db, ITextChunker chunker, IEmbeddingClient embeddings, CancellationToken ct)
+        AppDbContext db, ITextChunker chunker, IEmbeddingClient embeddings,
+        ILogger<OcrTextRequest> logger, CancellationToken ct)
     {
         var userId = principal.GetUserId();
         var document = await db.Documents.FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId, ct);
@@ -182,10 +183,13 @@ public static class DocumentEndpoints
         }
         catch (Exception ex)
         {
+            // Log the full exception server-side; return a generic message so we don't leak
+            // stack traces, connection strings, or third-party error text to the caller.
+            logger.LogError(ex, "OCR indexing failed for document {DocumentId}", document.Id);
             document.Status = DocumentStatus.Failed;
-            document.Error = ex.Message;
+            document.Error = "Failed to index recognized text.";
             await db.SaveChangesAsync(ct);
-            return Results.Problem(ex.Message);
+            return Results.Problem("Failed to index recognized text.", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 

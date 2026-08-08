@@ -43,8 +43,11 @@ public sealed class IndexingWorker(
             }
             catch (Exception ex)
             {
+                // Full exception stays in the log; the persisted document.Error is exposed via
+                // the DocumentDto, so keep it generic — parser messages can leak file-path
+                // fragments, embedding-service URLs, or third-party stack traces.
                 logger.LogError(ex, "Indexing failed for document {DocumentId}", documentId);
-                await MarkFailedAsync(documentId, ex.Message, stoppingToken);
+                await MarkFailedAsync(documentId, "Failed to index document.", stoppingToken);
             }
         }
     }

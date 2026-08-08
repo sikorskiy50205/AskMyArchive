@@ -31,7 +31,7 @@ public static class ChatEndpoints
     /// <summary>Answers a question over the user's archive, streaming tokens via server-sent events.</summary>
     private static async Task AskAsync(
         AskRequest request, ClaimsPrincipal principal, AppDbContext db, RagService rag,
-        HttpContext http, CancellationToken ct)
+        HttpContext http, ILogger<AskRequest> logger, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Question))
         {
@@ -82,8 +82,12 @@ public static class ChatEndpoints
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // Upstream LLM / embeddings errors can carry API keys, endpoint URLs, or provider
+            // stack traces — log the detail server-side and hand the user a generic message.
+            logger.LogError(ex, "RAG pipeline failed for user {UserId}", userId);
             http.Response.StatusCode = StatusCodes.Status502BadGateway;
-            await http.Response.WriteAsJsonAsync(new { error = ex.Message }, ct);
+            await http.Response.WriteAsJsonAsync(
+                new { error = "The AI service is unavailable. Please try again shortly." }, ct);
             return;
         }
 
@@ -107,7 +111,9 @@ public static class ChatEndpoints
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            await WriteEventAsync(http.Response, "error", new { error = ex.Message }, ct);
+            logger.LogError(ex, "Streaming failed mid-response for user {UserId}", userId);
+            await WriteEventAsync(http.Response, "error",
+                new { error = "The AI service dropped the connection. Please try again." }, ct);
             return;
         }
 

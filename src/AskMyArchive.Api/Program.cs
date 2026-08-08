@@ -129,6 +129,18 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+
+// Baseline response headers on every API reply. CSP is domain-specific and belongs in the
+// reverse-proxy config for the deployed environment, so it is intentionally not set here.
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["Referrer-Policy"] = "no-referrer";
+    headers["X-Frame-Options"] = "DENY";
+    await next();
+});
+
 app.UseRateLimiter();
 
 app.UseAuthentication();
